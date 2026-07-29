@@ -105,3 +105,15 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 .result-row small { color: var(--muted); font-weight: 400; }
 .mini-cards { display: flex; gap: 0.6rem; flex-wrap: wrap; }
 .home-link { text-align: center; color: var(--accent); }
+
+/* ----- Réglages & board ----- */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.settings-field { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem; color: var(--muted); }
+.settings-field input { width: 100%; }
+.public-setup { display: flex; flex-direction: column; gap: 0.7rem; background: var(--bg2); border-radius: 14px; padding: 1rem; }
+.public-setup h2, .board h2 { margin: 0; font-size: 1.05rem; }
+.hint { color: var(--muted); font-size: 0.85rem; margin: 0; }
+.board { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.5rem; }
+.board-row { display: flex; align-items: center; gap: 0.8rem; background: var(--bg2); border-radius: 12px; padding: 0.7rem 1rem; }
+.board-info { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }
+.badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.75rem; border: 1px solid var(--accent); color: var(--accent); }

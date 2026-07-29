@@ -75,7 +75,7 @@ export default function Auction({ state }: { state: GameState }) {
       </p>
 
       <div className="bid-buttons">
-        {config.ui.increments.map(inc => {
+        {config.game.ui.increments.map(inc => {
           const amount = auction.current_bid + inc
           return (
             <button key={inc} className="chip" onClick={() => bid(amount)}

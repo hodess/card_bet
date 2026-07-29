@@ -4,10 +4,10 @@
     "startBankroll": 1000,
     "minBid": 10,
     "closeDelaySeconds": 3,
-    "maxAuctionSeconds": 60
-  },
-  "ui": {
-    "increments": [10, 50, 100]
+    "maxAuctionSeconds": 60,
+    "ui": {
+      "increments": [10, 50, 100]
+    }
   },
   "bot": {
     "bidProbability": 0.6,

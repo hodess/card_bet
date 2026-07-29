@@ -168,8 +168,10 @@ export type Database = {
           id: string
           max_auction_seconds: number
           min_bid: number
+          next_game_id: string | null
           start_bankroll: number
           status: string
+          visibility: string
         }
         Insert: {
           close_delay_seconds?: number
@@ -179,8 +181,10 @@ export type Database = {
           id?: string
           max_auction_seconds?: number
           min_bid?: number
+          next_game_id?: string | null
           start_bankroll?: number
           status?: string
+          visibility?: string
         }
         Update: {
           close_delay_seconds?: number
@@ -190,10 +194,20 @@ export type Database = {
           id?: string
           max_auction_seconds?: number
           min_bid?: number
+          next_game_id?: string | null
           start_bankroll?: number
           status?: string
+          visibility?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "games_next_game_id_fkey"
+            columns: ["next_game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_cards: {
         Row: {
@@ -287,6 +301,7 @@ export type Database = {
           p_max_auction_seconds?: number
           p_min_bid?: number
           p_start_bankroll?: number
+          p_visibility?: string
         }
         Returns: Json
       }
@@ -298,10 +313,27 @@ export type Database = {
         Args: { game_code: string; nickname: string }
         Returns: Json
       }
+      join_game_by_id: {
+        Args: { g_id: string; nickname: string }
+        Returns: Json
+      }
+      list_public_games: { Args: never; Returns: Json }
       open_next_auction: { Args: { g_id: string }; Returns: undefined }
       pass_auction: { Args: { g_id: string }; Returns: undefined }
       place_bid: { Args: { amount: number; g_id: string }; Returns: undefined }
+      rematch_game: { Args: { old_game_id: string }; Returns: Json }
       start_game: { Args: { g_id: string }; Returns: undefined }
+      update_game_settings: {
+        Args: {
+          g_id: string
+          p_close_delay_seconds?: number
+          p_deck_size?: number
+          p_max_auction_seconds?: number
+          p_min_bid?: number
+          p_start_bankroll?: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
