@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { maxBid, formatMs } from './game'
+import { maxBid, formatMs, cardTier } from './game'
 
 describe('maxBid (règle de réserve)', () => {
   it('réserve min_bid par slot manquant restant', () => {
@@ -16,5 +16,14 @@ describe('formatMs', () => {
   })
   it('ne descend pas sous zéro', () => {
     expect(formatMs(-200)).toBe('0.0')
+  })
+})
+
+describe('cardTier', () => {
+  it('or ≥ 88, argent 85–87, bronze < 85', () => {
+    expect(cardTier(88)).toBe('gold')
+    expect(cardTier(87)).toBe('silver')
+    expect(cardTier(85)).toBe('silver')
+    expect(cardTier(84)).toBe('bronze')
   })
 })

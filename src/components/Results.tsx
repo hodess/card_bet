@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { GameState } from '../hooks/useGame'
+import { cardTier } from '../lib/game'
 
 export default function Results({ state }: { state: GameState }) {
   const { players, ownedCards } = state
@@ -14,18 +15,22 @@ export default function Results({ state }: { state: GameState }) {
 
   return (
     <main className="page">
-      <h1>{tie ? 'Égalité !' : `${rows[0].player.nickname} gagne !`}</h1>
-      {rows.map(({ player, cards, total }) => (
-        <section key={player.id}>
-          <h2>{player.nickname} — {total} pts (reste {player.bankroll} €)</h2>
-          <ul>
+      <h1 className="podium-title">{tie ? 'Égalité !' : `🏆 ${rows[0].player.nickname} gagne !`}</h1>
+      {rows.map(({ player, cards, total }, i) => (
+        <section key={player.id} className={`result-row${i === 0 && !tie ? ' winner' : ''}`}>
+          <h2>{player.nickname} — {total} pts <small>(reste {player.bankroll} €)</small></h2>
+          <div className="mini-cards">
             {cards.map(c => (
-              <li key={c.card_id}>{c.card.name} ({c.card.rating}) — payé {c.price_paid} €</li>
+              <div key={c.card_id} className={`fut-card mini ${cardTier(c.card.rating)}`}>
+                <div className="fut-rating">{c.card.rating}</div>
+                <div className="fut-name">{c.card.name}</div>
+                <div className="fut-price">{c.price_paid} €</div>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
       ))}
-      <Link to="/">Nouvelle partie</Link>
+      <Link className="home-link" to="/">Nouvelle partie</Link>
     </main>
   )
 }

@@ -134,6 +134,41 @@ mises concurrentes, l'auto-complétion et le calcul du classement.
 
 ---
 
+## Workflow quotidien
+
+**La vérité vit dans `supabase/migrations/` (git), jamais dans le dashboard.**
+
+| Tu veux… | Tu fais… |
+|---|---|
+| Changer le schéma / une fonction de jeu | `npx supabase migration new ma_modif` → écrire le SQL → `npx supabase db reset` → `npx supabase test db` → commit → PR |
+| Appliquer les nouvelles migrations sans perdre les données locales | `npx supabase migration up` |
+| Repartir d'un état propre (avant les tests) | `npx supabase db reset` (rejoue migrations + seed) |
+| Mettre à jour les types front | `npx supabase gen types typescript --local > src/lib/database.types.ts` |
+| Changer un réglage (auth, etc.) | éditer `supabase/config.toml` → `npx supabase config push` |
+| Consulter les données prod | Dashboard → Table Editor (lecture seulement) |
+
+Les deux interdits :
+
+1. **Jamais de SQL de schéma dans le dashboard prod** — il divergerait de git et la
+   migration suivante casserait.
+2. **Jamais re-pousser le seed** (`--include-seed`) — non idempotent, les 40 cartes
+   seraient dupliquées.
+
+## CI/CD
+
+À chaque PR, le job `test` monte un Supabase **éphémère** dans le runner (Docker),
+rejoue migrations + seed, lance pgTAP puis vitest et le build. Au merge sur `main` :
+`migrate` applique les nouvelles migrations à la prod, puis `build` + `deploy`
+publient le front sur GitHub Pages. `main` est protégée : PR obligatoire, check `test`
+vert requis.
+
+| Credential | Type | Pourquoi |
+|---|---|---|
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Variables (publiques) | Embarquées dans le bundle ; la sécurité vient de la RLS |
+| `SUPABASE_DB_URL` | **Secret** | Connexion Postgres (pooler) avec le mot de passe DB — seul le job `migrate` y accède |
+
+---
+
 ## 3. Pièges connus du free tier
 
 - **Pause après ~7 jours d'inactivité** : le projet cloud s'endort, le jeu est « down »

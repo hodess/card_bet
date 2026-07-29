@@ -39,23 +39,32 @@ navigateur. Mise en place de Supabase : [`initSupabase.md`](initSupabase.md).
 - **V2** — comptes, historique, statistiques, amis, ranking ELO. Les parties restent
   temporaires ; seuls comptes/stats/classements sont persistés.
 
-## Développement
+## Développement local
 
-Prérequis : Node 20+, Docker (pour Supabase local), CLI Supabase.
+Prérequis : Node 22+, Docker. Le CLI Supabase est un devDependency (`npx supabase …`) —
+c'est lui qui pilote les conteneurs Docker (Postgres, realtime, auth), pas de
+docker-compose à écrire.
 
 ```bash
 npm install
-supabase start          # Postgres local + realtime + studio (Docker)
-supabase db reset       # rejoue migrations + seed des cartes
+npx supabase start      # stack local (première fois : télécharge les images)
+npx supabase db reset   # rejoue migrations + seed (état propre)
+cp .env.example .env.local   # puis coller l'anon key locale affichée par supabase start
 npm run dev             # front sur http://localhost:5173
 ```
 
-Tests :
+Tests : `npx supabase test db` (pgTAP — la logique de jeu) et `npm test` (vitest).
 
-```bash
-supabase test db        # pgTAP — la logique de jeu (le cœur du risque)
-npm test                # Vitest — fonctions pures du front
-```
+Modifier le schéma : `npx supabase migration new <nom>` → SQL → `db reset` → `test db`
+→ régénérer les types. Détails : [`initSupabase.md`](initSupabase.md).
 
-Déploiement : push sur `main` → GitHub Actions build et publie sur GitHub Pages.
-Le schéma se pousse sur le cloud avec `supabase db push`.
+Les valeurs par défaut d'une partie (bankroll, deck, délais…) et les paramètres du bot
+vivent dans [`src/config.json`](src/config.json).
+
+Tester seul : crée une partie puis « + Ajouter un bot » dans le salon.
+
+## Contribuer / déployer
+
+`main` est protégée : branche + PR obligatoires. La CI teste chaque PR sur un Supabase
+éphémère ; au merge, elle applique les migrations à la prod puis déploie le front sur
+GitHub Pages. Personne ne pousse de schéma en prod à la main.

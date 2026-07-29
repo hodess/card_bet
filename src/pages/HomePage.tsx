@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import config from '../config.json'
 
 export default function HomePage() {
   const nav = useNavigate()
@@ -9,7 +10,14 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null)
 
   async function createGame() {
-    const { data, error } = await supabase.rpc('create_game', { nickname })
+    const { data, error } = await supabase.rpc('create_game', {
+      nickname,
+      p_deck_size: config.game.deckSize,
+      p_start_bankroll: config.game.startBankroll,
+      p_min_bid: config.game.minBid,
+      p_close_delay_seconds: config.game.closeDelaySeconds,
+      p_max_auction_seconds: config.game.maxAuctionSeconds,
+    })
     if (error) return setError(error.message)
     nav(`/game/${(data as { game_id: string }).game_id}`)
   }

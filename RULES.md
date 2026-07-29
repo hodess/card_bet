@@ -24,7 +24,8 @@ démarre avec la même bankroll virtuelle.
 | Taille du deck | 3 | Nombre de cartes à obtenir pour finir |
 | Mise minimale | 10 | Sert aussi de montant d'ouverture forcée |
 | Incréments de mise | +10 / +50 / +100 / Max | Boutons de surenchère rapide |
-| Délai d'adjudication | 4 s | Sans surenchère pendant ce délai, la carte est adjugée |
+| Délai d'adjudication | 3 s (configurable par partie) | Sans surenchère pendant ce délai, la carte est adjugée |
+| Passer | À tout moment sauf en tête | Se retirer définitivement de l'enchère en cours |
 | Durée max d'une enchère | 60 s | Plafond dur, l'enchère ne peut pas bloquer la partie |
 
 La durée totale d'une partie n'est pas fixe : elle dépend du rythme des enchères.
@@ -38,11 +39,17 @@ L'objectif de design est que ça reste rapide (ordre de grandeur : 2 à 3 minute
    dont le deck n'est pas complet.
 3. Les autres joueurs peuvent surenchérir via les boutons d'incréments. Chaque mise doit
    être strictement supérieure à la précédente.
-4. Chaque nouvelle mise **relance le compte à rebours de 4 secondes**.
-5. Quand 4 secondes s'écoulent sans surenchère — ou quand le plafond de 60 secondes est
-   atteint — la carte est **adjugée au dernier enchérisseur**, qui paie sa mise et ajoute
-   la carte à son deck.
-6. La carte suivante apparaît.
+4. Chaque nouvelle mise **relance le compte à rebours** (délai d'adjudication, 3 s par
+   défaut).
+5. À tout moment, un joueur qui ne mène pas peut **passer** : il se retire
+   définitivement de cette enchère.
+6. La carte est **adjugée au dernier enchérisseur** — qui paie sa mise et ajoute la
+   carte à son deck — dès que l'une de ces conditions est remplie :
+   - le délai d'adjudication s'écoule sans surenchère ;
+   - le plafond de 60 secondes est atteint ;
+   - **plus aucun joueur ne peut ou ne veut surenchérir** (tous ont passé, ou leur
+     réserve ne permet plus de suivre) : adjudication **immédiate**, sans attendre.
+7. La carte suivante apparaît.
 
 ## 4. Règle de réserve
 
@@ -107,6 +114,14 @@ Périmètre volontairement minimal : valider le système de mise temps réel de 
 - Partie **privée uniquement**, rejointe par code d'invitation.
 - Pas de compte : pseudo éphémère par session.
 - Toutes les règles des sections 1 à 6 s'appliquent.
+
+### V0.5 — Enchère accélérée
+
+- **Bouton "Je passe"** : un joueur qui ne mène pas peut se retirer de l'enchère en cours.
+- **Clôture immédiate** : dès qu'aucun joueur ne peut ou ne veut surenchérir, la carte est adjugée immédiatement, sans attendre le délai.
+- **Délais configurables par partie** : le délai d'adjudication est paramétrable à la création.
+- **Bot d'entraînement** : permet de jouer seul contre l'IA pour s'entraîner.
+- **Thème FUT** : interface et cartes à l'esthétique FIFA Ultimate Team.
 
 ### V1 — Le vrai jeu multijoueur
 

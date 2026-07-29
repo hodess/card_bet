@@ -44,6 +44,7 @@ export type Database = {
           id: string
           last_bid_at: string
           opened_at: string
+          passed: string[]
           seq: number
           status: string
         }
@@ -56,6 +57,7 @@ export type Database = {
           id?: string
           last_bid_at?: string
           opened_at?: string
+          passed?: string[]
           seq: number
           status?: string
         }
@@ -68,6 +70,7 @@ export type Database = {
           id?: string
           last_bid_at?: string
           opened_at?: string
+          passed?: string[]
           seq?: number
           status?: string
         }
@@ -158,28 +161,34 @@ export type Database = {
       }
       games: {
         Row: {
+          close_delay_seconds: number
           code: string
           created_at: string
           deck_size: number
           id: string
+          max_auction_seconds: number
           min_bid: number
           start_bankroll: number
           status: string
         }
         Insert: {
+          close_delay_seconds?: number
           code: string
           created_at?: string
           deck_size?: number
           id?: string
+          max_auction_seconds?: number
           min_bid?: number
           start_bankroll?: number
           status?: string
         }
         Update: {
+          close_delay_seconds?: number
           code?: string
           created_at?: string
           deck_size?: number
           id?: string
+          max_auction_seconds?: number
           min_bid?: number
           start_bankroll?: number
           status?: string
@@ -270,15 +279,27 @@ export type Database = {
     }
     Functions: {
       close_auction: { Args: { g_id: string }; Returns: undefined }
-      create_game: { Args: { nickname: string }; Returns: Json }
+      create_game: {
+        Args: {
+          nickname: string
+          p_close_delay_seconds?: number
+          p_deck_size?: number
+          p_max_auction_seconds?: number
+          p_min_bid?: number
+          p_start_bankroll?: number
+        }
+        Returns: Json
+      }
       deck_count: { Args: { p_id: string }; Returns: number }
       get_server_time: { Args: never; Returns: string }
+      has_challenger: { Args: { p_auction_id: string }; Returns: boolean }
       is_player: { Args: { g_id: string }; Returns: boolean }
       join_game: {
         Args: { game_code: string; nickname: string }
         Returns: Json
       }
       open_next_auction: { Args: { g_id: string }; Returns: undefined }
+      pass_auction: { Args: { g_id: string }; Returns: undefined }
       place_bid: { Args: { amount: number; g_id: string }; Returns: undefined }
       start_game: { Args: { g_id: string }; Returns: undefined }
     }

@@ -1,17 +1,107 @@
 :root {
   font-family: system-ui, sans-serif;
-  color-scheme: light dark;
+  color-scheme: dark;
+  --bg: #0d1321;
+  --bg2: #1a2238;
+  --text: #eef1f8;
+  --muted: #8a93ad;
+  --accent: #e8c34a;
+  --danger: #d05252;
+  --gold1: #f5d76e; --gold2: #b8860b;
+  --silver1: #dfe3ea; --silver2: #7d8494;
+  --bronze1: #d29a68; --bronze2: #7a4a24;
 }
-body { margin: 0; display: flex; justify-content: center; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; display: flex; justify-content: center; color: var(--text);
+  background: radial-gradient(ellipse at 50% -20%, var(--bg2), var(--bg) 70%);
+  min-height: 100vh;
+}
 #root { width: 100%; max-width: 480px; padding: 1rem; }
-.page { display: flex; flex-direction: column; gap: 1rem; }
-.center { text-align: center; margin-top: 4rem; }
-.error { color: #c0392b; }
-.code { font-size: 1.5rem; letter-spacing: 0.3rem; }
-.card-display { border: 2px solid currentColor; border-radius: 12px; padding: 1.5rem; text-align: center; }
-.timer { font-size: 2rem; text-align: center; font-variant-numeric: tabular-nums; }
-.bid-buttons { display: flex; gap: 0.5rem; justify-content: center; }
-.bid-buttons button { flex: 1; padding: 1rem 0; font-size: 1.1rem; }
-.status { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; opacity: 0.8; }
-button { cursor: pointer; }
-button:disabled { cursor: not-allowed; opacity: 0.4; }
+.page { display: flex; flex-direction: column; gap: 1rem; align-items: stretch; }
+.center { text-align: center; margin-top: 4rem; color: var(--muted); }
+.error { color: var(--danger); }
+h1 { text-align: center; letter-spacing: 0.05em; }
+
+input {
+  background: var(--bg2); color: var(--text); border: 1px solid #2c3654;
+  border-radius: 10px; padding: 0.8rem 1rem; font-size: 1rem;
+}
+button {
+  cursor: pointer; border: none; border-radius: 12px; font-size: 1rem;
+  padding: 0.9rem 1rem; color: var(--bg); background: var(--accent); font-weight: 700;
+}
+button:disabled { cursor: not-allowed; opacity: 0.35; }
+button.secondary { background: var(--bg2); color: var(--text); border: 1px solid #2c3654; }
+.code { font-size: 1.6rem; letter-spacing: 0.35rem; color: var(--accent); }
+.player-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
+.player-list li { background: var(--bg2); border-radius: 10px; padding: 0.7rem 1rem; }
+
+/* ----- Carte FUT ----- */
+.fut-card {
+  position: relative; margin: 0 auto; width: 210px; aspect-ratio: 3 / 4;
+  border-radius: 16px; padding: 1rem; text-align: center;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  color: #201703;
+}
+.fut-card.gold   { background: linear-gradient(160deg, var(--gold1), var(--gold2)); }
+.fut-card.silver { background: linear-gradient(160deg, var(--silver1), var(--silver2)); }
+.fut-card.bronze { background: linear-gradient(160deg, var(--bronze1), var(--bronze2)); }
+.fut-rating {
+  position: absolute; top: 0.7rem; left: 0.9rem;
+  font-size: 2.4rem; font-weight: 900; line-height: 1;
+}
+.fut-position {
+  position: absolute; top: 3.2rem; left: 0.9rem;
+  font-size: 0.95rem; font-weight: 700; opacity: 0.75;
+}
+.fut-name { font-size: 1.15rem; font-weight: 800; padding-bottom: 0.4rem; }
+.fut-card.mini { width: 92px; border-radius: 10px; padding: 0.5rem; }
+.fut-card.mini .fut-rating { font-size: 1.3rem; top: 0.35rem; left: 0.5rem; }
+.fut-card.mini .fut-name { font-size: 0.62rem; }
+.fut-price { font-size: 0.6rem; opacity: 0.8; }
+
+/* ----- Timer ----- */
+.timer-ring { position: relative; width: 84px; height: 84px; margin: -0.4rem auto 0; }
+.timer-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-bg { fill: none; stroke: #2c3654; stroke-width: 7; }
+.ring-fg {
+  fill: none; stroke: var(--accent); stroke-width: 7; stroke-linecap: round;
+  transition: stroke-dashoffset 0.1s linear;
+}
+.ring-label {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: 1.25rem; font-variant-numeric: tabular-nums; font-weight: 700;
+}
+.current-bid { text-align: center; margin: 0; font-size: 1.1rem; }
+.current-bid strong { color: var(--accent); font-size: 1.4rem; }
+
+/* ----- Boutons de mise ----- */
+.bid-buttons { display: flex; gap: 0.5rem; }
+.chip { flex: 1; padding: 1.1rem 0; border-radius: 999px; font-size: 1.05rem; }
+.chip.max { background: linear-gradient(160deg, var(--gold1), var(--gold2)); }
+.pass { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+
+/* ----- Bandeau joueurs ----- */
+.players-strip { display: grid; gap: 0.5rem; margin-top: 0.5rem; }
+.player-chip {
+  display: flex; gap: 0.7rem; align-items: baseline;
+  background: var(--bg2); border-radius: 10px; padding: 0.55rem 0.9rem;
+  border: 1px solid transparent; font-size: 0.9rem;
+}
+.player-chip.leading { border-color: var(--accent); }
+.player-chip.passed { opacity: 0.55; }
+.chip-name { font-weight: 700; }
+.chip-bank { color: var(--muted); }
+.chip-deck { letter-spacing: 0.15em; color: var(--accent); }
+.chip-state { margin-left: auto; font-size: 0.75rem; color: var(--muted); }
+
+/* ----- Résultats ----- */
+.podium-title { font-size: 1.5rem; }
+.result-row { background: var(--bg2); border-radius: 14px; padding: 0.9rem 1rem; }
+.result-row.winner { border: 1px solid var(--accent); }
+.result-row h2 { margin: 0 0 0.6rem; font-size: 1.05rem; }
+.result-row small { color: var(--muted); font-weight: 400; }
+.mini-cards { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.home-link { text-align: center; color: var(--accent); }

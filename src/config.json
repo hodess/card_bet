@@ -1,0 +1,20 @@
+{
+  "game": {
+    "deckSize": 3,
+    "startBankroll": 1000,
+    "minBid": 10,
+    "closeDelaySeconds": 3,
+    "maxAuctionSeconds": 60
+  },
+  "ui": {
+    "increments": [10, 50, 100]
+  },
+  "bot": {
+    "bidProbability": 0.6,
+    "passProbability": 0.3,
+    "pollMs": 800,
+    "delayMinMs": 500,
+    "delayMaxMs": 2500,
+    "names": ["Bot Zizou", "Bot Bielsa", "Bot Pep", "Bot Arsène"]
+  }
+}
