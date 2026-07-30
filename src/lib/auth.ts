@@ -44,17 +44,3 @@ export async function signOutToAnonymous(): Promise<void> {
   const { error } = await supabase.auth.signInAnonymously()
   if (error) throw error
 }
-
-// traduit les codes d'erreur (SQL et Supabase Auth) en messages affichables
-export function authErrorMessage(e: unknown): string {
-  const msg = e instanceof Error ? e.message : String(e)
-  if (msg.includes('USERNAME_TAKEN')) return 'Ce pseudo est déjà pris.'
-  if (msg.includes('INVALID_USERNAME')) return '3 à 20 caractères : lettres, chiffres et _ uniquement.'
-  if (msg.includes('ALREADY_HAS_PROFILE')) return 'Ce compte a déjà un pseudo.'
-  if (msg.includes('ANONYMOUS_NOT_ALLOWED')) return 'Crée d\'abord ton compte pour choisir un pseudo.'
-  if (msg.includes('already been registered') || msg.includes('already registered'))
-    return 'Cet email est déjà associé à un compte — connecte-toi plutôt.'
-  if (msg.includes('Invalid login credentials')) return 'Email ou mot de passe incorrect.'
-  if (msg.includes('Password should be')) return 'Mot de passe trop court (6 caractères minimum).'
-  return msg
-}

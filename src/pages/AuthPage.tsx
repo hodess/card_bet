@@ -2,9 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useProfile } from '../hooks/useProfile'
 import {
-  authErrorMessage, claimUsername, signInWithGoogle, signInWithPassword,
+  claimUsername, signInWithGoogle, signInWithPassword,
   upgradeWithGoogle, upgradeWithPassword,
 } from '../lib/auth'
+import { errorMessage } from '../lib/errors'
 
 export default function AuthPage() {
   const p = useProfile()
@@ -15,7 +16,6 @@ export default function AuthPage() {
         <h1>Mon compte</h1>
         <p>Connecté en tant que <strong>{p.profile.username}</strong>.</p>
         <Link className="home-link" to="/me">Mon profil</Link>
-        <Link className="home-link" to="/">Accueil</Link>
       </main>
     )
   }
@@ -40,7 +40,7 @@ function CredentialsForm() {
       // le onAuthStateChange de useProfile fait re-rendre AuthPage :
       // signup → UsernameForm ; login → écran connecté
     } catch (err) {
-      setError(authErrorMessage(err))
+      setError(errorMessage(err))
     } finally {
       setBusy(false)
     }
@@ -53,7 +53,7 @@ function CredentialsForm() {
       else await signInWithGoogle()
       // redirection OAuth : on quitte la page
     } catch (err) {
-      setError(authErrorMessage(err))
+      setError(errorMessage(err))
     }
   }
 
@@ -77,7 +77,6 @@ function CredentialsForm() {
         {signup ? 'Déjà un compte ? Se connecter' : 'Pas de compte ? En créer un'}
       </button>
       {error && <p className="error">{error}</p>}
-      <Link className="home-link" to="/">Accueil</Link>
     </main>
   )
 }
@@ -96,7 +95,7 @@ function UsernameForm({ onDone }: { onDone: () => Promise<void> }) {
       await onDone()
       nav('/')
     } catch (err) {
-      setError(authErrorMessage(err))
+      setError(errorMessage(err))
     } finally {
       setBusy(false)
     }
