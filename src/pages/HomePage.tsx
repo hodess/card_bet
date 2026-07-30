@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { signOutToAnonymous } from '../lib/auth'
+import { useProfile } from '../hooks/useProfile'
 import config from '../config.json'
 import GameSettingsFields, { type GameSettings } from '../components/GameSettingsFields'
 
 type PublicGame = {
   game_id: string
   host_nickname: string
+  host_username: string | null
   player_count: number
   deck_size: number
   start_bankroll: number
@@ -24,12 +27,15 @@ const DEFAULTS: GameSettings = {
 
 export default function HomePage() {
   const nav = useNavigate()
+  const { profile, loading: profileLoading } = useProfile()
   const [nickname, setNickname] = useState('')
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [publicSetup, setPublicSetup] = useState(false)
   const [settings, setSettings] = useState<GameSettings>(DEFAULTS)
   const [board, setBoard] = useState<PublicGame[]>([])
+  const [query, setQuery] = useState('')
+  const [found, setFound] = useState<{ username: string }[]>([])
 
   useEffect(() => {
     let alive = true
@@ -42,10 +48,26 @@ export default function HomePage() {
     return () => { alive = false; clearInterval(id) }
   }, [])
 
+  // recherche de joueurs (debounce léger)
+  useEffect(() => {
+    if (query.trim().length < 2) { setFound([]); return }
+    let alive = true
+    const t = setTimeout(async () => {
+      const { data } = await supabase.from('profiles').select('username')
+        .ilike('username', `%${query.trim()}%`).limit(10)
+      if (alive) setFound(data ?? [])
+    }, 250)
+    return () => { alive = false; clearTimeout(t) }
+  }, [query])
+
+  // le pseudo du profil fait foi (le serveur l'impose de toute façon)
+  const effectiveNickname = profile?.username ?? nickname
+  const noNick = !effectiveNickname.trim()
+
   async function createGame(visibility: 'private' | 'public') {
     const s = visibility === 'public' ? settings : DEFAULTS
     const { data, error } = await supabase.rpc('create_game', {
-      nickname,
+      nickname: effectiveNickname,
       p_deck_size: s.deckSize,
       p_start_bankroll: s.startBankroll,
       p_min_bid: s.minBid,
@@ -58,24 +80,39 @@ export default function HomePage() {
   }
 
   async function joinByCode() {
-    const { data, error } = await supabase.rpc('join_game', { game_code: code, nickname })
+    const { data, error } = await supabase.rpc('join_game', {
+      game_code: code, nickname: effectiveNickname,
+    })
     if (error) return setError(error.message)
     nav(`/game/${(data as { game_id: string }).game_id}`)
   }
 
   async function joinPublic(gameId: string) {
-    const { data, error } = await supabase.rpc('join_game_by_id', { g_id: gameId, nickname })
+    const { data, error } = await supabase.rpc('join_game_by_id', {
+      g_id: gameId, nickname: effectiveNickname,
+    })
     if (error) return setError(error.message)
     nav(`/game/${(data as { game_id: string }).game_id}`)
   }
 
-  const noNick = !nickname.trim()
-
   return (
     <main className="page">
+      <header className="account-bar">
+        {profileLoading ? null : profile ? (
+          <>
+            <Link className="player-link" to="/me">{profile.username}</Link>
+            <button className="linklike" onClick={() => signOutToAnonymous()}>Se déconnecter</button>
+          </>
+        ) : (
+          <Link className="player-link" to="/account">Créer mon compte / Se connecter</Link>
+        )}
+      </header>
+
       <h1>CardBet</h1>
-      <input placeholder="Ton pseudo" value={nickname}
-        onChange={e => setNickname(e.target.value)} />
+      {!profile && (
+        <input placeholder="Ton pseudo" value={nickname}
+          onChange={e => setNickname(e.target.value)} />
+      )}
 
       <button onClick={() => createGame('private')} disabled={noNick}>
         Créer une partie privée
@@ -106,7 +143,9 @@ export default function HomePage() {
         {board.map(g => (
           <div key={g.game_id} className="board-row">
             <div className="board-info">
-              <strong>{g.host_nickname}</strong>
+              {g.host_username
+                ? <Link className="player-link" to={`/profile/${g.host_username}`}><strong>{g.host_username}</strong></Link>
+                : <strong>{g.host_nickname}</strong>}
               <span className="hint">
                 {g.deck_size} cartes · {g.start_bankroll} € · mise min {g.min_bid} · {g.close_delay_seconds} s
               </span>
@@ -114,6 +153,20 @@ export default function HomePage() {
             <button onClick={() => joinPublic(g.game_id)} disabled={noNick}>Rejoindre</button>
           </div>
         ))}
+      </section>
+
+      <section className="board">
+        <h2>Trouver un joueur</h2>
+        <input placeholder="Rechercher un pseudo…" value={query}
+          onChange={e => setQuery(e.target.value)} />
+        {found.map(f => (
+          <div key={f.username} className="board-row">
+            <Link className="player-link" to={`/profile/${f.username}`}>{f.username}</Link>
+          </div>
+        ))}
+        {query.trim().length >= 2 && found.length === 0 && (
+          <p className="hint">Aucun joueur trouvé.</p>
+        )}
       </section>
 
       {error && <p className="error">{error}</p>}

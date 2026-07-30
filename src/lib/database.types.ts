@@ -126,6 +126,42 @@ export type Database = {
         }
         Relationships: []
       }
+      friendships: {
+        Row: {
+          addressee: string
+          created_at: string
+          requester: string
+          status: string
+        }
+        Insert: {
+          addressee: string
+          created_at?: string
+          requester: string
+          status?: string
+        }
+        Update: {
+          addressee?: string
+          created_at?: string
+          requester?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friendships_addressee_fkey"
+            columns: ["addressee"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_requester_fkey"
+            columns: ["requester"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_cards: {
         Row: {
           card_id: number
@@ -209,6 +245,111 @@ export type Database = {
           },
         ]
       }
+      match_cards: {
+        Row: {
+          card_id: number
+          match_id: string
+          price_paid: number
+          seat: number
+        }
+        Insert: {
+          card_id: number
+          match_id: string
+          price_paid: number
+          seat: number
+        }
+        Update: {
+          card_id?: number
+          match_id?: string
+          price_paid?: number
+          seat?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_cards_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_cards_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_players: {
+        Row: {
+          is_bot: boolean
+          match_id: string
+          money_left: number
+          nickname: string
+          profile_id: string | null
+          result: string
+          score: number
+          seat: number
+        }
+        Insert: {
+          is_bot?: boolean
+          match_id: string
+          money_left: number
+          nickname: string
+          profile_id?: string | null
+          result: string
+          score: number
+          seat: number
+        }
+        Update: {
+          is_bot?: boolean
+          match_id?: string
+          money_left?: number
+          nickname?: string
+          profile_id?: string | null
+          result?: string
+          score?: number
+          seat?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_players_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_players_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matches: {
+        Row: {
+          deck_size: number
+          finished_at: string
+          id: string
+          start_bankroll: number
+        }
+        Insert: {
+          deck_size: number
+          finished_at?: string
+          id?: string
+          start_bankroll: number
+        }
+        Update: {
+          deck_size?: number
+          finished_at?: string
+          id?: string
+          start_bankroll?: number
+        }
+        Relationships: []
+      }
       player_cards: {
         Row: {
           card_id: number
@@ -258,6 +399,7 @@ export type Database = {
           bankroll: number
           game_id: string
           id: string
+          is_bot: boolean
           nickname: string
           seat: number
         }
@@ -266,6 +408,7 @@ export type Database = {
           bankroll: number
           game_id: string
           id?: string
+          is_bot?: boolean
           nickname: string
           seat: number
         }
@@ -274,6 +417,7 @@ export type Database = {
           bankroll?: number
           game_id?: string
           id?: string
+          is_bot?: boolean
           nickname?: string
           seat?: number
         }
@@ -287,11 +431,34 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          username?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      accept_friend_request: {
+        Args: { p_username: string }
+        Returns: undefined
+      }
+      claim_username: { Args: { p_username: string }; Returns: undefined }
       close_auction: { Args: { g_id: string }; Returns: undefined }
       create_game: {
         Args: {
@@ -306,11 +473,16 @@ export type Database = {
         Returns: Json
       }
       deck_count: { Args: { p_id: string }; Returns: number }
+      effective_nickname: {
+        Args: { typed: string; uid: string }
+        Returns: string
+      }
+      get_profile_stats: { Args: { p_username: string }; Returns: Json }
       get_server_time: { Args: never; Returns: string }
       has_challenger: { Args: { p_auction_id: string }; Returns: boolean }
       is_player: { Args: { g_id: string }; Returns: boolean }
       join_game: {
-        Args: { game_code: string; nickname: string }
+        Args: { game_code: string; nickname: string; p_is_bot?: boolean }
         Returns: Json
       }
       join_game_by_id: {
@@ -321,7 +493,10 @@ export type Database = {
       open_next_auction: { Args: { g_id: string }; Returns: undefined }
       pass_auction: { Args: { g_id: string }; Returns: undefined }
       place_bid: { Args: { amount: number; g_id: string }; Returns: undefined }
+      profile_id_of: { Args: { p_username: string }; Returns: string }
       rematch_game: { Args: { old_game_id: string }; Returns: Json }
+      remove_friendship: { Args: { p_username: string }; Returns: undefined }
+      send_friend_request: { Args: { p_username: string }; Returns: undefined }
       start_game: { Args: { g_id: string }; Returns: undefined }
       update_game_settings: {
         Args: {
