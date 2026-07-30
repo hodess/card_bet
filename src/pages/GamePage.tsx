@@ -5,6 +5,7 @@ import { startBot } from '../lib/bot'
 import Lobby from '../components/Lobby'
 import Auction from '../components/Auction'
 import Results from '../components/Results'
+import MatchSummary from '../components/MatchSummary'
 
 export default function GamePage() {
   const { gameId } = useParams<'gameId'>()
@@ -18,7 +19,8 @@ export default function GamePage() {
   }
 
   if (state.loading) return <p className="center">Chargement…</p>
-  if (!state.game) return <p className="center">Partie introuvable.</p>
+  // partie invisible (visiteur bloqué par la RLS) ou purgée : on tente le résumé persistant
+  if (!state.game) return <MatchSummary gameId={gameId!} />
   if (state.game.status === 'lobby') return <Lobby state={state} onAddBot={addBot} />
   if (state.game.status === 'playing') return <Auction state={state} />
   return <Results state={state} />

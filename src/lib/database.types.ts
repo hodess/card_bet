@@ -333,18 +333,21 @@ export type Database = {
         Row: {
           deck_size: number
           finished_at: string
+          game_id: string | null
           id: string
           start_bankroll: number
         }
         Insert: {
           deck_size: number
           finished_at?: string
+          game_id?: string | null
           id?: string
           start_bankroll: number
         }
         Update: {
           deck_size?: number
           finished_at?: string
+          game_id?: string | null
           id?: string
           start_bankroll?: number
         }

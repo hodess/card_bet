@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(16);
 
 create function test_signup(uid uuid, anon boolean default false) returns void
 language plpgsql as $$
@@ -50,6 +50,10 @@ select ok((select profile_id from match_players where nickname = 'Bob_A') is nul
 select is((select profile_id from match_players where nickname = 'Alice_A'),
   '00000000-0000-0000-0000-000000000001'::uuid, 'A : profil relié');
 select is((select count(*)::int from match_cards), 2, 'A : deck final copié');
+select is((select m.game_id from matches m
+           join match_players mp on mp.match_id = m.id
+           where mp.nickname = 'Alice_A'),
+  (select id from games where code = 'HISTA1'), 'A : game_id relié à la partie');
 
 -- transition uniquement : re-poser finished ne duplique pas
 update games set status = 'finished' where code = 'HISTA1';
@@ -80,6 +84,8 @@ select make_game('HISTE1', 'Alice_E', '00000000-0000-0000-0000-000000000001', 99
 update games set status = 'finished' where code = 'HISTE1';
 select is((select is_bot from match_players where nickname = 'Bot_E'), true, 'E : is_bot recopié');
 select is((select count(*)::int from matches), 4, 'E : match avec bot enregistré (Alice a un profil)');
+select is((select count(*)::int from matches where game_id is not null), 4,
+  'tous les matchs enregistrés portent un game_id');
 
 select * from finish();
 rollback;
