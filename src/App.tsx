@@ -2,6 +2,7 @@ import { HashRouter, Route, Routes } from 'react-router-dom'
 import { useEffect, useState, type ReactNode } from 'react'
 import { ensureSession } from './lib/supabase'
 import { useProfile } from './hooks/useProfile'
+import NavMenu from './components/NavMenu'
 import HomePage from './pages/HomePage'
 import GamePage from './pages/GamePage'
 import AuthPage from './pages/AuthPage'
@@ -22,6 +23,7 @@ export default function App() {
   if (!ready) return <p className="center">Connexion…</p>
   return (
     <HashRouter>
+      <NavMenu />
       <UsernameGate>
         <Routes>
           <Route path="/" element={<HomePage />} />

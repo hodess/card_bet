@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { signOutToAnonymous } from '../lib/auth'
 import { useProfile } from '../hooks/useProfile'
 import config from '../config.json'
 import GameSettingsFields, { type GameSettings } from '../components/GameSettingsFields'
+import { createGame as createGameRpc, joinGameByCode, joinGameById } from '../lib/gameApi'
+import { errorMessage } from '../lib/errors'
 
 type PublicGame = {
   game_id: string
@@ -27,7 +28,7 @@ const DEFAULTS: GameSettings = {
 
 export default function HomePage() {
   const nav = useNavigate()
-  const { profile, loading: profileLoading } = useProfile()
+  const { profile } = useProfile()
   const [nickname, setNickname] = useState('')
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -44,7 +45,7 @@ export default function HomePage() {
       if (alive && data) setBoard(data as unknown as PublicGame[])
     }
     load()
-    const id = setInterval(load, 3000)
+    const id = setInterval(load, config.ui.boardPollMs)
     return () => { alive = false; clearInterval(id) }
   }, [])
 
@@ -56,7 +57,7 @@ export default function HomePage() {
       const { data } = await supabase.from('profiles').select('username')
         .ilike('username', `%${query.trim()}%`).limit(10)
       if (alive) setFound(data ?? [])
-    }, 250)
+    }, config.ui.searchDebounceMs)
     return () => { alive = false; clearTimeout(t) }
   }, [query])
 
@@ -66,48 +67,39 @@ export default function HomePage() {
 
   async function createGame(visibility: 'private' | 'public') {
     const s = visibility === 'public' ? settings : DEFAULTS
-    const { data, error } = await supabase.rpc('create_game', {
-      nickname: effectiveNickname,
-      p_deck_size: s.deckSize,
-      p_start_bankroll: s.startBankroll,
-      p_min_bid: s.minBid,
-      p_close_delay_seconds: s.closeDelaySeconds,
-      p_max_auction_seconds: config.game.maxAuctionSeconds,
-      p_visibility: visibility,
-    })
-    if (error) return setError(error.message)
-    nav(`/game/${(data as { game_id: string }).game_id}`)
+    try {
+      const gameId = await createGameRpc({
+        nickname: effectiveNickname,
+        deckSize: s.deckSize,
+        startBankroll: s.startBankroll,
+        minBid: s.minBid,
+        closeDelaySeconds: s.closeDelaySeconds,
+        visibility,
+      })
+      nav(`/game/${gameId}`)
+    } catch (e) {
+      setError(errorMessage(e))
+    }
   }
 
   async function joinByCode() {
-    const { data, error } = await supabase.rpc('join_game', {
-      game_code: code, nickname: effectiveNickname,
-    })
-    if (error) return setError(error.message)
-    nav(`/game/${(data as { game_id: string }).game_id}`)
+    try {
+      nav(`/game/${await joinGameByCode(code, effectiveNickname)}`)
+    } catch (e) {
+      setError(errorMessage(e))
+    }
   }
 
   async function joinPublic(gameId: string) {
-    const { data, error } = await supabase.rpc('join_game_by_id', {
-      g_id: gameId, nickname: effectiveNickname,
-    })
-    if (error) return setError(error.message)
-    nav(`/game/${(data as { game_id: string }).game_id}`)
+    try {
+      nav(`/game/${await joinGameById(gameId, effectiveNickname)}`)
+    } catch (e) {
+      setError(errorMessage(e))
+    }
   }
 
   return (
     <main className="page">
-      <header className="account-bar">
-        {profileLoading ? null : profile ? (
-          <>
-            <Link className="player-link" to="/me">{profile.username}</Link>
-            <button className="linklike" onClick={() => signOutToAnonymous()}>Se déconnecter</button>
-          </>
-        ) : (
-          <Link className="player-link" to="/account">Créer mon compte / Se connecter</Link>
-        )}
-      </header>
-
       <h1>CardBet</h1>
       {!profile && (
         <input placeholder="Ton pseudo" value={nickname}

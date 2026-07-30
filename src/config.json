@@ -16,5 +16,11 @@
     "delayMinMs": 500,
     "delayMaxMs": 2500,
     "names": ["Bot Zizou", "Bot Bielsa", "Bot Pep", "Bot Arsène"]
+  },
+  "ui": {
+    "historyPageSize": 20,
+    "historyCap": 200,
+    "searchDebounceMs": 250,
+    "boardPollMs": 3000
   }
 }

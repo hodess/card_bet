@@ -1,15 +1,18 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { GameState } from '../hooks/useGame'
-import { supabase } from '../lib/supabase'
-import { cardTier } from '../lib/game'
 import PlayerName from './PlayerName'
+import Card from './Card'
 import { useUsernames } from '../hooks/useUsernames'
+import { joinGameById, rematchGame } from '../lib/gameApi'
+import { errorMessage } from '../lib/errors'
 
 export default function Results({ state }: { state: GameState }) {
   const nav = useNavigate()
   const { game, players, ownedCards, myPlayerId } = state
   const usernames = useUsernames(players.map(p => p.auth_uid))
   const myNickname = players.find(p => p.id === myPlayerId)?.nickname ?? 'Joueur'
+  const [error, setError] = useState<string | null>(null)
   const rows = players.map(p => {
     const cards = ownedCards.filter(c => c.player_id === p.id)
     return { player: p, cards, total: cards.reduce((s, c) => s + c.card.rating, 0) }
@@ -20,17 +23,19 @@ export default function Results({ state }: { state: GameState }) {
     && rows[0].player.bankroll === rows[1].player.bankroll
 
   async function propose() {
-    const { data, error } = await supabase.rpc('rematch_game', { old_game_id: game!.id })
-    if (error) return alert(error.message)
-    nav(`/game/${(data as { game_id: string }).game_id}`)
+    try {
+      nav(`/game/${await rematchGame(game!.id)}`)
+    } catch (e) {
+      setError(errorMessage(e))
+    }
   }
 
   async function joinRematch() {
-    const { data, error } = await supabase.rpc('join_game_by_id', {
-      g_id: game!.next_game_id!, nickname: myNickname,
-    })
-    if (error) return alert(error.message)
-    nav(`/game/${(data as { game_id: string }).game_id}`)
+    try {
+      nav(`/game/${await joinGameById(game!.next_game_id!, myNickname)}`)
+    } catch (e) {
+      setError(errorMessage(e))
+    }
   }
 
   return (
@@ -44,11 +49,7 @@ export default function Results({ state }: { state: GameState }) {
           </h2>
           <div className="mini-cards">
             {cards.map(c => (
-              <div key={c.card_id} className={`fut-card mini ${cardTier(c.card.rating)}`}>
-                <div className="fut-rating">{c.card.rating}</div>
-                <div className="fut-name">{c.card.name}</div>
-                <div className="fut-price">{c.price_paid} €</div>
-              </div>
+              <Card key={c.card_id} card={c.card} size="mini" price={c.price_paid} />
             ))}
           </div>
         </section>
@@ -58,6 +59,7 @@ export default function Results({ state }: { state: GameState }) {
         ? <button onClick={joinRematch}>Revanche proposée — Rejoindre</button>
         : <button onClick={propose}>Proposer une revanche</button>}
 
+      {error && <p className="error">{error}</p>}
       <Link className="home-link" to="/">Accueil</Link>
     </main>
   )

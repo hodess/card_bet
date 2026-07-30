@@ -9,3 +9,7 @@ export function formatMs(ms: number): string {
 export function cardTier(rating: number): string {
   return rating >= 88 ? 'gold' : rating >= 85 ? 'silver' : 'bronze'
 }
+
+export function cardsOf<T extends { player_id: string }>(cards: T[], playerId: string | null): T[] {
+  return cards.filter(c => c.player_id === playerId)
+}

@@ -4,6 +4,7 @@ import type { GameState } from '../hooks/useGame'
 import GameSettingsFields, { type GameSettings } from './GameSettingsFields'
 import PlayerName from './PlayerName'
 import { useUsernames } from '../hooks/useUsernames'
+import { errorMessage } from '../lib/errors'
 
 export default function Lobby({ state, onAddBot }: { state: GameState; onAddBot: (code: string) => void }) {
   const { game, players, myPlayerId } = state
@@ -18,6 +19,7 @@ export default function Lobby({ state, onAddBot }: { state: GameState; onAddBot:
     closeDelaySeconds: game!.close_delay_seconds,
   })
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // les réglages appliqués côté serveur font foi (realtime) — on resynchronise le brouillon
   useEffect(() => {
@@ -31,6 +33,7 @@ export default function Lobby({ state, onAddBot }: { state: GameState; onAddBot:
 
   async function saveSettings() {
     setSaving(true)
+    setError(null)
     const { error } = await supabase.rpc('update_game_settings', {
       g_id: game!.id,
       p_deck_size: draft.deckSize,
@@ -39,12 +42,13 @@ export default function Lobby({ state, onAddBot }: { state: GameState; onAddBot:
       p_close_delay_seconds: draft.closeDelaySeconds,
     })
     setSaving(false)
-    if (error) alert(error.message)
+    if (error) setError(errorMessage(error))
   }
 
   async function start() {
+    setError(null)
     const { error } = await supabase.rpc('start_game', { g_id: game!.id })
-    if (error) alert(error.message)
+    if (error) setError(errorMessage(error))
   }
 
   function addBot() {
@@ -85,6 +89,7 @@ export default function Lobby({ state, onAddBot }: { state: GameState; onAddBot:
       {isHost
         ? <button onClick={start} disabled={players.length < 2}>Démarrer</button>
         : <p>En attente de l'hôte…</p>}
+      {error && <p className="error">{error}</p>}
     </main>
   )
 }

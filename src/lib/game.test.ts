@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { maxBid, formatMs, cardTier } from './game'
+import { maxBid, formatMs, cardTier, cardsOf } from './game'
 
 describe('maxBid (règle de réserve)', () => {
   it('réserve min_bid par slot manquant restant', () => {
@@ -25,5 +25,20 @@ describe('cardTier', () => {
     expect(cardTier(87)).toBe('silver')
     expect(cardTier(85)).toBe('silver')
     expect(cardTier(84)).toBe('bronze')
+  })
+})
+
+describe('cardsOf', () => {
+  const cards = [
+    { player_id: 'a', card_id: 1 },
+    { player_id: 'b', card_id: 2 },
+    { player_id: 'a', card_id: 3 },
+  ]
+  it('filtre les cartes d\'un joueur', () => {
+    expect(cardsOf(cards, 'a').map(c => c.card_id)).toEqual([1, 3])
+  })
+  it('renvoie vide pour un joueur inconnu ou null', () => {
+    expect(cardsOf(cards, 'z')).toEqual([])
+    expect(cardsOf(cards, null)).toEqual([])
   })
 })
