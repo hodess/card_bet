@@ -178,3 +178,26 @@ vert requis.
   cloud ; le cloud n'évolue que par `db push` de nouvelles migrations.
 - Les **clés locales et cloud sont différentes** : si le front affiche des erreurs 401,
   vérifie que `.env.local` pointe bien sur l'environnement que tu crois.
+
+---
+
+## V1 — Configuration Auth (dashboard prod, à faire une fois)
+
+Dans **Authentication → Settings** du projet Supabase :
+
+1. **Allow manual linking** : ON (requis par `linkIdentity` pour l'upgrade anonyme → Google).
+2. **Confirm email** : OFF (l'upgrade email + mot de passe doit être immédiat).
+3. **Secure email change** : OFF (une seule confirmation, pas double).
+4. **Site URL** : `https://hodess.github.io/card_bet/` ; ajouter la même URL dans
+   **Redirect URLs** (le retour OAuth atterrit sur la racine, pas sur une route `#/`).
+
+Provider **Google** (Authentication → Providers → Google) :
+
+1. Dans Google Cloud Console : créer un projet → **OAuth consent screen** (External,
+   app name CardBet) → **Credentials → OAuth Client ID** (Web application).
+2. **Authorized redirect URI** : `https://ppcdvechokyzkacxszfo.supabase.co/auth/v1/callback`.
+3. Copier Client ID + Secret dans le provider Google du dashboard, l'activer.
+
+En local, Google n'est **pas** activé : tester l'upgrade avec email + mot de passe
+(les emails partent dans la boîte de test http://127.0.0.1:54324). Le flux Google se
+teste en prod dès le premier déploiement (spec V1, risque n° 1).

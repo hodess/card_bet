@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { GameState } from '../hooks/useGame'
 import GameSettingsFields, { type GameSettings } from './GameSettingsFields'
+import PlayerName from './PlayerName'
+import { useUsernames } from '../hooks/useUsernames'
 
 export default function Lobby({ state, onAddBot }: { state: GameState; onAddBot: (code: string) => void }) {
   const { game, players, myPlayerId } = state
   const isHost = players.find(p => p.id === myPlayerId)?.seat === 0
+  const usernames = useUsernames(players.map(p => p.auth_uid))
   const isPrivate = game!.visibility === 'private'
   const [botRequested, setBotRequested] = useState(false)
   const [draft, setDraft] = useState<GameSettings>({
@@ -56,7 +59,12 @@ export default function Lobby({ state, onAddBot }: { state: GameState; onAddBot:
       <h1>Salon <span className="badge">{isPrivate ? 'Privée' : 'Publique'}</span></h1>
       <p>Code de la partie : <strong className="code">{game!.code}</strong></p>
       <ul className="player-list">
-        {players.map(p => <li key={p.id}>{p.nickname}{p.seat === 0 && ' (hôte)'}</li>)}
+        {players.map(p => (
+          <li key={p.id}>
+            <PlayerName nickname={p.nickname} username={usernames[p.auth_uid]} />
+            {p.seat === 0 && ' (hôte)'}
+          </li>
+        ))}
       </ul>
 
       <section className="public-setup">

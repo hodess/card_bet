@@ -117,3 +117,15 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 .board-row { display: flex; align-items: center; gap: 0.8rem; background: var(--bg2); border-radius: 12px; padding: 0.7rem 1rem; }
 .board-info { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }
 .badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.75rem; border: 1px solid var(--accent); color: var(--accent); }
+
+/* --- V1 : comptes --- */
+.auth-form { display: flex; flex-direction: column; gap: 0.5rem; }
+.linklike {
+  background: none; border: none; padding: 0;
+  color: inherit; text-decoration: underline; cursor: pointer; font: inherit;
+}
+.player-link { color: inherit; text-decoration: underline dotted; }
+.account-bar {
+  display: flex; justify-content: flex-end; align-items: center;
+  gap: 0.75rem; width: 100%;
+}

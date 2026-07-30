@@ -34,10 +34,12 @@ navigateur. Mise en place de Supabase : [`initSupabase.md`](initSupabase.md).
 - **V0 (en cours)** — la boucle d'enchère qui marche : 2 joueurs, deck de 3 cartes, un
   pack Football (~40 joueurs réels, sans photos), partie privée par code, auth anonyme.
   Design technique : [`docs/superpowers/specs/2026-07-29-cardbet-v0-design.md`](docs/superpowers/specs/2026-07-29-cardbet-v0-design.md)
-- **V1** — joker (refuser une ouverture forcée), 2 à 8 joueurs, taille de deck
-  configurable, plusieurs packs (Football, Basket, Animés…), parties publiques.
-- **V2** — comptes, historique, statistiques, amis, ranking ELO. Les parties restent
-  temporaires ; seuls comptes/stats/classements sont persistés.
+- **V1 (en cours)** — comptes (anonyme → upgrade email/Google), pseudo unique,
+  historique persistant (résumé + deck final), profils publics avec face-à-face,
+  amis. Les parties restent temporaires ; seuls comptes/historique/amis sont
+  persistés. Design : [`docs/superpowers/specs/2026-07-29-v1-comptes-design.md`](docs/superpowers/specs/2026-07-29-v1-comptes-design.md)
+- **V2** — joker (refuser une ouverture forcée), 2 à 8 joueurs, plusieurs packs
+  (Football, Basket, Animés…), invitations d'amis en partie, ranking ELO.
 
 ## Développement local
 

@@ -46,7 +46,7 @@ export function startBot(gameCode: string): () => void {
     const { error: authError } = await bot.auth.signInAnonymously()
     if (authError || stopped) return
     const nickname = config.bot.names[Math.floor(Math.random() * config.bot.names.length)]
-    const { data, error } = await bot.rpc('join_game', { game_code: gameCode, nickname })
+    const { data, error } = await bot.rpc('join_game', { game_code: gameCode, nickname, p_is_bot: true })
     if (error || stopped) return
     const gameId = (data as { game_id: string }).game_id
     const { data: auth } = await bot.auth.getUser()

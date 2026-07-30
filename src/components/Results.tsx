@@ -2,10 +2,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import type { GameState } from '../hooks/useGame'
 import { supabase } from '../lib/supabase'
 import { cardTier } from '../lib/game'
+import PlayerName from './PlayerName'
+import { useUsernames } from '../hooks/useUsernames'
 
 export default function Results({ state }: { state: GameState }) {
   const nav = useNavigate()
   const { game, players, ownedCards, myPlayerId } = state
+  const usernames = useUsernames(players.map(p => p.auth_uid))
   const myNickname = players.find(p => p.id === myPlayerId)?.nickname ?? 'Joueur'
   const rows = players.map(p => {
     const cards = ownedCards.filter(c => c.player_id === p.id)
@@ -35,7 +38,10 @@ export default function Results({ state }: { state: GameState }) {
       <h1 className="podium-title">{tie ? 'Égalité !' : `🏆 ${rows[0].player.nickname} gagne !`}</h1>
       {rows.map(({ player, cards, total }, i) => (
         <section key={player.id} className={`result-row${i === 0 && !tie ? ' winner' : ''}`}>
-          <h2>{player.nickname} — {total} pts <small>(reste {player.bankroll} €)</small></h2>
+          <h2>
+            <PlayerName nickname={player.nickname} username={usernames[player.auth_uid]} />
+            {' '}— {total} pts <small>(reste {player.bankroll} €)</small>
+          </h2>
           <div className="mini-cards">
             {cards.map(c => (
               <div key={c.card_id} className={`fut-card mini ${cardTier(c.card.rating)}`}>
