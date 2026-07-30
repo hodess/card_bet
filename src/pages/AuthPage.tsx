@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useProfile } from '../hooks/useProfile'
 import {
   claimUsername, signInWithGoogle, signInWithPassword,
@@ -7,16 +7,18 @@ import {
 } from '../lib/auth'
 import { errorMessage } from '../lib/errors'
 import { takeAuthError } from '../lib/authError'
+import { useT } from '../hooks/useT'
 
 export default function AuthPage() {
   const p = useProfile()
-  if (p.loading) return <p className="center">Chargement…</p>
+  const { t } = useT()
+  if (p.loading) return <p className="center">{t('common.loading')}</p>
   if (p.profile) {
     return (
       <main className="page">
-        <h1>Mon compte</h1>
-        <p>Connecté en tant que <strong>{p.profile.username}</strong>.</p>
-        <Link className="home-link" to="/me">Mon profil</Link>
+        <h1>{t('auth.myAccount')}</h1>
+        <p>{t('auth.signedInAs', { username: p.profile.username })}</p>
+        <Link className="home-link" to="/me">{t('auth.myProfile')}</Link>
       </main>
     )
   }
@@ -25,13 +27,15 @@ export default function AuthPage() {
 }
 
 function CredentialsForm() {
-  const [mode, setMode] = useState<'signup' | 'login'>('signup')
+  const { t } = useT()
+  const [params, setParams] = useSearchParams()
+  // l'URL fait foi : absent ou valeur inconnue → création de compte (comportement historique)
+  const signup = params.get('mode') !== 'login'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [returnError] = useState(() => takeAuthError())
-  const signup = mode === 'signup'
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -61,36 +65,37 @@ function CredentialsForm() {
 
   return (
     <main className="page">
-      <h1>{signup ? 'Créer mon compte' : 'Se connecter'}</h1>
+      <h1>{signup ? t('auth.signupTitle') : t('auth.loginTitle')}</h1>
       {returnError && returnError.code === 'identity_already_exists' && (
         <section className="public-setup">
-          <p className="error">Ce compte Google est déjà lié à un compte CardBet.</p>
+          <p className="error">{t('auth.googleAlreadyLinked')}</p>
           <button className="secondary" onClick={google}>
-            Se connecter avec ce compte Google
+            {t('auth.googleSignInWithIt')}
           </button>
         </section>
       )}
       {returnError && returnError.code !== 'identity_already_exists' && (
         <section className="public-setup">
-          <p className="error">La connexion Google a échoué.</p>
+          <p className="error">{t('auth.googleFailed')}</p>
           {returnError.description && <p className="hint">{returnError.description}</p>}
         </section>
       )}
-      {signup && <p className="hint">Ton compte garde ton pseudo, ton historique et tes amis.</p>}
+      {signup && <p className="hint">{t('auth.signupPitch')}</p>}
       <form className="auth-form" onSubmit={submit}>
-        <input type="email" placeholder="Email" value={email} required
+        <input type="email" placeholder={t('auth.email')} value={email} required
           onChange={e => setEmail(e.target.value)} />
-        <input type="password" placeholder="Mot de passe (6 caractères min.)" value={password}
+        <input type="password" placeholder={t('auth.password')} value={password}
           required minLength={6} onChange={e => setPassword(e.target.value)} />
         <button type="submit" disabled={busy}>
-          {busy ? 'Un instant…' : signup ? 'Créer mon compte' : 'Se connecter'}
+          {busy ? t('common.wait') : signup ? t('auth.submitSignup') : t('auth.submitLogin')}
         </button>
       </form>
       <button className="secondary" onClick={google}>
-        {signup ? 'Continuer avec Google' : 'Se connecter avec Google'}
+        {signup ? t('auth.googleSignup') : t('auth.googleLogin')}
       </button>
-      <button className="linklike" onClick={() => { setMode(signup ? 'login' : 'signup'); setError(null) }}>
-        {signup ? 'Déjà un compte ? Se connecter' : 'Pas de compte ? En créer un'}
+      <button className="linklike"
+        onClick={() => { setParams({ mode: signup ? 'login' : 'signup' }, { replace: true }); setError(null) }}>
+        {signup ? t('auth.toLogin') : t('auth.toSignup')}
       </button>
       {error && <p className="error">{error}</p>}
     </main>
@@ -98,6 +103,7 @@ function CredentialsForm() {
 }
 
 function UsernameForm({ onDone }: { onDone: () => Promise<void> }) {
+  const { t } = useT()
   const nav = useNavigate()
   const [username, setUsername] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -119,12 +125,12 @@ function UsernameForm({ onDone }: { onDone: () => Promise<void> }) {
 
   return (
     <main className="page">
-      <h1>Choisis ton pseudo</h1>
-      <p className="hint">Unique et définitif : c'est lui qu'on verra en partie et sur ton profil.</p>
+      <h1>{t('auth.chooseUsername')}</h1>
+      <p className="hint">{t('auth.usernameHint')}</p>
       <form className="auth-form" onSubmit={submit}>
-        <input placeholder="Pseudo (3-20 : lettres, chiffres, _)" value={username} required
+        <input placeholder={t('auth.usernamePlaceholder')} value={username} required
           onChange={e => setUsername(e.target.value)} />
-        <button type="submit" disabled={busy}>{busy ? 'Un instant…' : 'Valider'}</button>
+        <button type="submit" disabled={busy}>{busy ? t('common.wait') : t('auth.validate')}</button>
       </form>
       {error && <p className="error">{error}</p>}
     </main>

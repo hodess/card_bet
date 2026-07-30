@@ -18,6 +18,8 @@ notes l'emporte. Monnaie 100 % virtuelle, parties de quelques minutes.
 
 Règles complètes et versionnées : [`RULES.md`](RULES.md).
 
+Interface bilingue FR/EN, avec un sélecteur de langue accessible depuis n'importe quel écran, y compris en partie.
+
 ## Stack
 
 | Brique | Rôle |

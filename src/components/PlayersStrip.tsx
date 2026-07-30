@@ -1,4 +1,5 @@
 import { cardsOf } from '../lib/game'
+import { useT } from '../hooks/useT'
 
 type StripPlayer = { id: string; nickname: string; bankroll: number }
 
@@ -9,6 +10,7 @@ export default function PlayersStrip({ players, ownedCards, deckSize, currentBid
   currentBidderId: string
   passedIds: string[]
 }) {
+  const { t } = useT()
   return (
     <footer className="players-strip">
       {players.map(p => {
@@ -20,8 +22,8 @@ export default function PlayersStrip({ players, ownedCards, deckSize, currentBid
             <span className="chip-name">{p.nickname}</span>
             <span className="chip-bank">{p.bankroll} €</span>
             <span className="chip-deck">{'●'.repeat(count)}{'○'.repeat(Math.max(0, deckSize - count))}</span>
-            {passed && <span className="chip-state">a passé</span>}
-            {leading && <span className="chip-state">mène</span>}
+            {passed && <span className="chip-state">{t('auction.chipPassed')}</span>}
+            {leading && <span className="chip-state">{t('auction.chipLeading')}</span>}
           </div>
         )
       })}

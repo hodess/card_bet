@@ -1,4 +1,5 @@
 import config from '../config.json'
+import { useT } from '../hooks/useT'
 
 // Toute la zone d'action de l'enchère : incréments, Max, Je passe.
 export default function BidButtons({ currentBid, myMax, canAct, hasPassed, onBid, onPass }: {
@@ -9,6 +10,7 @@ export default function BidButtons({ currentBid, myMax, canAct, hasPassed, onBid
   onBid: (amount: number) => void
   onPass: () => void
 }) {
+  const { t } = useT()
   return (
     <>
       <div className="bid-buttons">
@@ -23,11 +25,11 @@ export default function BidButtons({ currentBid, myMax, canAct, hasPassed, onBid
         })}
         <button className="chip max" onClick={() => onBid(myMax)}
           disabled={!canAct || myMax <= currentBid}>
-          Max {myMax}
+          {t('auction.max', { n: myMax })}
         </button>
       </div>
       <button className="pass" onClick={onPass} disabled={!canAct}>
-        {hasPassed ? 'Tu as passé' : 'Je passe'}
+        {hasPassed ? t('auction.passed') : t('auction.pass')}
       </button>
     </>
   )

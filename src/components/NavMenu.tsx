@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useProfile } from '../hooks/useProfile'
 import { useFriendships } from '../hooks/useFriendships'
+import { useT } from '../hooks/useT'
 import { signOutToAnonymous } from '../lib/auth'
 
 // Burger fixe en haut à gauche + drawer. Désactivé pendant une partie
@@ -11,6 +12,7 @@ export default function NavMenu() {
   const location = useLocation()
   const { profile } = useProfile()
   const { pendingReceivedCount, refresh } = useFriendships(!!profile)
+  const { t } = useT()
   const inGame = location.pathname.startsWith('/game/')
 
   useEffect(() => { if (open) refresh() }, [open, refresh])
@@ -26,7 +28,7 @@ export default function NavMenu() {
 
   return (
     <>
-      <button className="nav-burger" aria-label="Menu" disabled={inGame}
+      <button className="nav-burger" aria-label={t('nav.menu')} disabled={inGame}
         onClick={() => setOpen(true)}>
         ☰
         {pendingReceivedCount > 0 && <span className="nav-badge">{pendingReceivedCount}</span>}
@@ -35,12 +37,12 @@ export default function NavMenu() {
         <>
           <div className="nav-overlay" onClick={close} />
           <nav className="nav-drawer">
-            <Link to="/" onClick={close}>Accueil</Link>
+            <Link to="/" onClick={close}>{t('nav.home')}</Link>
             {profile && (
               <>
-                <Link to={`/profile/${profile.username}`} onClick={close}>Mon profil</Link>
+                <Link to={`/profile/${profile.username}`} onClick={close}>{t('nav.myProfile')}</Link>
                 <Link to="/me" onClick={close}>
-                  Mes amis
+                  {t('nav.myFriends')}
                   {pendingReceivedCount > 0 && <span className="nav-badge inline">{pendingReceivedCount}</span>}
                 </Link>
               </>
@@ -51,11 +53,14 @@ export default function NavMenu() {
                   <span className="hint">{profile.username}</span>
                   <button className="linklike"
                     onClick={() => { close(); signOutToAnonymous().catch(e => console.warn(e)) }}>
-                    Se déconnecter
+                    {t('nav.signOut')}
                   </button>
                 </>
               ) : (
-                <Link to="/account" onClick={close}>Créer mon compte / Se connecter</Link>
+                <>
+                  <Link to="/account?mode=signup" onClick={close}>{t('nav.signUp')}</Link>
+                  <Link to="/account?mode=login" onClick={close}>{t('nav.signIn')}</Link>
+                </>
               )}
             </div>
           </nav>

@@ -1,37 +1,32 @@
-// Traduit les codes d'erreur serveur (SQL `raise exception 'CODE'` et Supabase Auth)
-// en messages affichables. Fallback : le message brut.
-const CODES: Record<string, string> = {
-  // comptes
-  USERNAME_TAKEN: 'Ce pseudo est déjà pris.',
-  INVALID_USERNAME: '3 à 20 caractères : lettres, chiffres et _ uniquement.',
-  ALREADY_HAS_PROFILE: 'Ce compte a déjà un pseudo.',
-  ANONYMOUS_NOT_ALLOWED: 'Crée d’abord ton compte pour choisir un pseudo.',
-  NOT_AUTHENTICATED: 'Connexion perdue — recharge la page.',
-  // parties
-  GAME_NOT_FOUND: 'Partie introuvable.',
-  GAME_FULL: 'La partie est déjà complète.',
-  GAME_ALREADY_STARTED: 'La partie a déjà commencé.',
-  GAME_NOT_FINISHED: 'La partie n’est pas terminée.',
-  NICKNAME_REQUIRED: 'Choisis un pseudo.',
-  INVALID_SETTINGS: 'Réglages invalides.',
-  SETTINGS_LOCKED: 'Les réglages d’une partie publique sont figés.',
-  NOT_HOST: 'Seul l’hôte peut faire ça.',
-  NOT_A_PLAYER: 'Tu n’es pas dans cette partie.',
-  // amis
-  PLAYER_NOT_FOUND: 'Joueur introuvable.',
-  SELF_FRIENDSHIP: 'Tu ne peux pas t’ajouter toi-même.',
-  ALREADY_FRIENDS: 'Vous êtes déjà amis.',
-  REQUEST_NOT_FOUND: 'Demande introuvable.',
-  PROFILE_REQUIRED: 'Crée ton compte pour utiliser les amis.',
-}
+import { t } from '../i18n'
 
+// Codes d'erreur serveur (SQL `raise exception 'CODE'`). Chaque code a une clé
+// `errors.<CODE>` dans les dictionnaires — le test errors.test.ts le vérifie.
+export const SERVER_CODES = [
+  // comptes
+  'USERNAME_TAKEN', 'INVALID_USERNAME', 'ALREADY_HAS_PROFILE',
+  'ANONYMOUS_NOT_ALLOWED', 'NOT_AUTHENTICATED',
+  // parties
+  'GAME_NOT_FOUND', 'GAME_FULL', 'GAME_ALREADY_STARTED', 'GAME_NOT_FINISHED',
+  'NICKNAME_REQUIRED', 'INVALID_SETTINGS', 'SETTINGS_LOCKED', 'NOT_HOST', 'NOT_A_PLAYER',
+  // amis
+  'PLAYER_NOT_FOUND', 'SELF_FRIENDSHIP', 'ALREADY_FRIENDS', 'REQUEST_NOT_FOUND',
+  'PROFILE_REQUIRED',
+] as const
+
+// Messages Supabase Auth (anglais, non codés) reconnus par fragment.
+const AUTH_MATCHES: [needles: string[], key: string][] = [
+  [['already been registered', 'already registered'], 'errors.emailAlreadyRegistered'],
+  [['Invalid login credentials'], 'errors.invalidCredentials'],
+  [['Password should be'], 'errors.passwordTooShort'],
+]
+
+// Traduit une erreur serveur en message affichable. Fallback : le message brut.
 export function errorMessage(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e)
-  const hit = Object.entries(CODES).find(([code]) => msg.includes(code))
-  if (hit) return hit[1]
-  if (msg.includes('already been registered') || msg.includes('already registered'))
-    return 'Cet email est déjà associé à un compte — connecte-toi plutôt.'
-  if (msg.includes('Invalid login credentials')) return 'Email ou mot de passe incorrect.'
-  if (msg.includes('Password should be')) return 'Mot de passe trop court (6 caractères minimum).'
+  const code = SERVER_CODES.find(c => msg.includes(c))
+  if (code) return t(`errors.${code}`)
+  const auth = AUTH_MATCHES.find(([needles]) => needles.some(n => msg.includes(n)))
+  if (auth) return t(auth[1])
   return msg
 }

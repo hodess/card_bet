@@ -150,3 +150,33 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 }
 .nav-drawer a { color: var(--text); text-decoration: none; font-weight: 700; font-size: 1.05rem; }
 .nav-footer { margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+
+/* --- V1.2 : sélecteur de langue --- */
+.lang-switch {
+  position: fixed; top: 0.8rem; right: 0.8rem; z-index: 50;
+  display: flex; align-items: baseline; gap: 0.5rem;
+  font-size: 0.8rem;
+}
+.lang-switch button { font-weight: 700; text-decoration: none; color: var(--muted); padding: 0.3rem; }
+.lang-switch button.active { color: var(--accent); }
+
+/* --- V1.2 : avatars --- */
+.avatar {
+  flex: none; display: grid; place-items: center;
+  width: 34px; height: 34px; border-radius: 999px;
+  background: hsl(var(--avatar-hue) 42% 34%);
+  border: 1px solid hsl(var(--avatar-hue) 45% 52%);
+  color: var(--text); font-weight: 800; font-size: 0.95rem;
+}
+.avatar.lg { width: 56px; height: 56px; font-size: 1.5rem; }
+
+/* --- V1.2 : page amis --- */
+.me-header { display: flex; align-items: center; gap: 0.9rem; }
+.me-header h1 { text-align: left; margin: 0 0 0.2rem; font-size: 1.4rem; }
+/* Doit rester après .board-row : même spécificité, la surcharge du padding
+   dépend de l'ordre d'apparition dans ce fichier. */
+.friend-row { padding: 0.6rem 0.9rem; border: 1px solid transparent; }
+.friend-row.highlight { border-color: var(--accent); }
+.friend-row .player-link { flex: 1; }
+.friend-actions { display: flex; gap: 0.4rem; }
+.friend-actions button { padding: 0.5rem 0.8rem; font-size: 0.85rem; }

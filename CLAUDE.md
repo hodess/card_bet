@@ -45,6 +45,9 @@ Workflow schéma : migration → `db reset` → `test db` → régénérer les t
 - `src/hooks/` : état partagé/realtime (`useGame`, `useProfile`, `useFriendships`…).
 - `src/lib/` : fonctions pures et accès Supabase (`game.ts`, `gameApi.ts`,
   `errors.ts`, `auth.ts`, `bot.ts`).
+- `src/i18n/` : dictionnaires plats `fr.ts`/`en.ts` et le singleton `t()`,
+  utilisable hors React (`errors.ts` en dépend). Le hook `useT` correspondant
+  vit dans `src/hooks/`.
 - `src/config.json` : tout le paramétrage (défauts de partie, bot, section `ui`
   pour les constantes d'interface). **Pas de nombre magique dans le code.**
   Ne pas réorganiser ce fichier sans demander.
@@ -59,13 +62,17 @@ Workflow schéma : migration → `db reset` → `test db` → régénérer les t
 3. **Erreurs utilisateur** : toujours `errorMessage(e)` (`src/lib/errors.ts`) +
    `<p className="error">`. **Jamais `alert()`.** Exception : les races normales
    d'enchère restent silencieuses (`console.warn`) dans `Auction`.
-4. **Erreurs SQL** : `raise exception 'CODE_EN_MAJUSCULES'` côté Postgres, code
+4. **i18n** : tout texte visible passe par `t()` ; les clés vivent dans
+   `src/i18n/{fr,en}.ts`. La parité des clés et des motifs d'interpolation
+   `{var}` entre les deux dictionnaires est vérifiée par test. On ne traduit
+   ni la marque, ni les données (pseudos, scores…), ni les commentaires.
+5. **Erreurs SQL** : `raise exception 'CODE_EN_MAJUSCULES'` côté Postgres, code
    ajouté à la table de `errors.ts` côté front.
-5. **Français partout** : UI, commentaires, messages de commit, docs.
-6. **Toute migration arrive avec ses tests pgTAP** (`supabase/tests/`, pattern
+6. **Français partout** : UI, commentaires, messages de commit, docs.
+7. **Toute migration arrive avec ses tests pgTAP** (`supabase/tests/`, pattern
    `test_signup` pour simuler des comptes). Toute fonction pure nouvelle dans
    `lib/` arrive avec son test vitest.
-7. **Comportement serveur d'abord** : ne jamais faire confiance au client
+8. **Comportement serveur d'abord** : ne jamais faire confiance au client
    (validation, identité, montants — tout est revérifié en SQL).
 
 ## Git
