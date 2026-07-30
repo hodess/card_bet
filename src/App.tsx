@@ -1,6 +1,7 @@
-import { HashRouter, Route, Routes } from 'react-router-dom'
+import { HashRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { useEffect, useState, type ReactNode } from 'react'
 import { ensureSession } from './lib/supabase'
+import { captureAuthError, peekAuthError } from './lib/authError'
 import { useProfile } from './hooks/useProfile'
 import NavMenu from './components/NavMenu'
 import HomePage from './pages/HomePage'
@@ -8,6 +9,19 @@ import GamePage from './pages/GamePage'
 import AuthPage from './pages/AuthPage'
 import ProfilePage from './pages/ProfilePage'
 import MePage from './pages/MePage'
+
+// capture l'éventuelle erreur OAuth du retour Google et nettoie l'URL,
+// avant tout rendu et avant l'init de la session
+captureAuthError()
+
+// une erreur OAuth en attente ? on atterrit sur /account qui sait l'afficher
+function AuthErrorRedirect() {
+  const nav = useNavigate()
+  useEffect(() => {
+    if (peekAuthError()) nav('/account', { replace: true })
+  }, [nav])
+  return null
+}
 
 // compte créé mais pseudo pas encore choisi (ex. OAuth interrompu) :
 // on force l'écran de choix du pseudo, quelle que soit la route
@@ -23,6 +37,7 @@ export default function App() {
   if (!ready) return <p className="center">Connexion…</p>
   return (
     <HashRouter>
+      <AuthErrorRedirect />
       <NavMenu />
       <UsernameGate>
         <Routes>

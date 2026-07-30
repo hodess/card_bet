@@ -6,6 +6,7 @@ import {
   upgradeWithGoogle, upgradeWithPassword,
 } from '../lib/auth'
 import { errorMessage } from '../lib/errors'
+import { takeAuthError } from '../lib/authError'
 
 export default function AuthPage() {
   const p = useProfile()
@@ -29,6 +30,7 @@ function CredentialsForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [returnError] = useState(() => takeAuthError())
   const signup = mode === 'signup'
 
   async function submit(e: FormEvent) {
@@ -49,9 +51,9 @@ function CredentialsForm() {
   async function google() {
     setError(null)
     try {
-      if (signup) await upgradeWithGoogle()
+      // après une erreur « déjà lié », on se CONNECTE au compte existant
+      if (signup && !returnError) await upgradeWithGoogle()
       else await signInWithGoogle()
-      // redirection OAuth : on quitte la page
     } catch (err) {
       setError(errorMessage(err))
     }
@@ -60,6 +62,20 @@ function CredentialsForm() {
   return (
     <main className="page">
       <h1>{signup ? 'Créer mon compte' : 'Se connecter'}</h1>
+      {returnError && returnError.code === 'identity_already_exists' && (
+        <section className="public-setup">
+          <p className="error">Ce compte Google est déjà lié à un compte CardBet.</p>
+          <button className="secondary" onClick={google}>
+            Se connecter avec ce compte Google
+          </button>
+        </section>
+      )}
+      {returnError && returnError.code !== 'identity_already_exists' && (
+        <section className="public-setup">
+          <p className="error">La connexion Google a échoué.</p>
+          {returnError.description && <p className="hint">{returnError.description}</p>}
+        </section>
+      )}
       {signup && <p className="hint">Ton compte garde ton pseudo, ton historique et tes amis.</p>}
       <form className="auth-form" onSubmit={submit}>
         <input type="email" placeholder="Email" value={email} required
