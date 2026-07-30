@@ -1,0 +1,176 @@
+// Dictionnaire français. Clés plates namespacées, interpolation {var}.
+// Toute clé ajoutée ici doit l'être aussi dans en.ts (test de parité).
+export const fr: Record<string, string> = {
+  // --- commun ---
+  'common.loading': 'Chargement…',
+  'common.connecting': 'Connexion…',
+  'common.home': 'Accueil',
+  'common.cancel': 'Annuler',
+  'common.wait': 'Un instant…',
+  'common.player': 'Joueur',
+  'common.bot': 'bot',
+  'common.scoreLine': '— {score} pts',
+  'common.moneyLeft': '(reste {money} €)',
+
+  // --- navigation ---
+  'nav.menu': 'Menu',
+  'nav.home': 'Accueil',
+  'nav.myProfile': 'Mon profil',
+  'nav.myFriends': 'Mes amis',
+  'nav.signOut': 'Se déconnecter',
+  'nav.signUp': 'Créer un compte',
+  'nav.signIn': 'Se connecter',
+  'nav.language': 'Langue',
+
+  // --- accueil ---
+  'home.nicknamePlaceholder': 'Ton pseudo',
+  'home.createPrivate': 'Créer une partie privée',
+  'home.createPublic': 'Créer une partie publique…',
+  'home.publicSettingsTitle': 'Partie publique — réglages',
+  'home.publicSettingsHint': 'Figés à la création : les joueurs du board les voient avant de rejoindre.',
+  'home.publish': 'Publier la partie',
+  'home.codePlaceholder': 'Code de partie',
+  'home.joinByCode': 'Rejoindre par code',
+  'home.publicGames': 'Parties publiques',
+  'home.noPublicGames': 'Aucune partie ouverte pour l’instant.',
+  'home.gameSummary': '{deck} cartes · {bankroll} € · mise min {minBid} · {delay} s',
+  'home.join': 'Rejoindre',
+
+  // --- recherche de joueurs ---
+  'search.title': 'Trouver un joueur',
+  'search.placeholder': 'Rechercher un pseudo…',
+  'search.none': 'Aucun joueur trouvé.',
+
+  // --- compte ---
+  'auth.myAccount': 'Mon compte',
+  'auth.signedInAs': 'Connecté en tant que {username}.',
+  'auth.myProfile': 'Mon profil',
+  'auth.signupTitle': 'Créer mon compte',
+  'auth.loginTitle': 'Se connecter',
+  'auth.signupPitch': 'Ton compte garde ton pseudo, ton historique et tes amis.',
+  'auth.email': 'Email',
+  'auth.password': 'Mot de passe (6 caractères min.)',
+  'auth.submitSignup': 'Créer mon compte',
+  'auth.submitLogin': 'Se connecter',
+  'auth.googleSignup': 'Continuer avec Google',
+  'auth.googleLogin': 'Se connecter avec Google',
+  'auth.googleAlreadyLinked': 'Ce compte Google est déjà lié à un compte CardBet.',
+  'auth.googleSignInWithIt': 'Se connecter avec ce compte Google',
+  'auth.googleFailed': 'La connexion Google a échoué.',
+  'auth.toLogin': 'Déjà un compte ? Se connecter',
+  'auth.toSignup': 'Pas de compte ? En créer un',
+  'auth.chooseUsername': 'Choisis ton pseudo',
+  'auth.usernameHint': 'Unique et définitif : c’est lui qu’on verra en partie et sur ton profil.',
+  'auth.usernamePlaceholder': 'Pseudo (3-20 : lettres, chiffres, _)',
+  'auth.validate': 'Valider',
+
+  // --- salon ---
+  'lobby.title': 'Salon',
+  'lobby.private': 'Privée',
+  'lobby.public': 'Publique',
+  'lobby.code': 'Code de la partie :',
+  'lobby.host': '(hôte)',
+  'lobby.settings': 'Réglages',
+  'lobby.settingsReadOnly': 'Réglages (lecture seule)',
+  'lobby.saving': 'Enregistrement…',
+  'lobby.saveSettings': 'Enregistrer les réglages',
+  'lobby.addBot': '+ Ajouter un bot',
+  'lobby.botComing': 'Bot en route…',
+  'lobby.start': 'Démarrer',
+  'lobby.waitingHost': 'En attente de l’hôte…',
+
+  // --- réglages de partie ---
+  'settings.deckSize': 'Cartes par deck',
+  'settings.startBankroll': 'Bankroll de départ',
+  'settings.minBid': 'Mise minimale',
+  'settings.closeDelaySeconds': 'Délai d’adjudication (s)',
+
+  // --- enchère ---
+  'auction.preparing': 'Préparation de l’enchère…',
+  'auction.you': '(toi)',
+  'auction.max': 'Max {n}',
+  'auction.pass': 'Je passe',
+  'auction.passed': 'Tu as passé',
+  'auction.chipPassed': 'a passé',
+  'auction.chipLeading': 'mène',
+
+  // --- résultats ---
+  'results.tie': 'Égalité !',
+  'results.winner': '🏆 {name} gagne !',
+  'results.winnerPast': '🏆 {name} a gagné !',
+  'results.rematchPropose': 'Proposer une revanche',
+  'results.rematchJoin': 'Revanche proposée — Rejoindre',
+
+  // --- résumé public de partie ---
+  'summary.unavailableTitle': 'Résumé indisponible',
+  'summary.unavailableHint': 'Le chargement a échoué. Vérifie ta connexion et réessaie.',
+  'summary.notFoundTitle': 'Partie introuvable ou non enregistrée',
+  'summary.notFoundHint': 'Le lien est peut-être erroné, ou la partie s’est jouée sans joueur à compte.',
+  'summary.playedOn': 'Partie du {date}',
+
+  // --- profil public ---
+  'profile.notFound': 'Profil introuvable',
+  'profile.stats': '{games} parties classées · {wins} V / {losses} D / {draws} N',
+  'profile.statsHint': 'Seules les parties entre joueurs à compte comptent dans les stats.',
+  'profile.h2hTitle': 'Face-à-face',
+  'profile.h2h': '{games} parties : {wins} V / {losses} D / {draws} N (de ton point de vue)',
+  'profile.createAccount': 'Crée ton compte',
+  'profile.toAddFriend': 'pour l’ajouter en ami.',
+
+  // --- historique ---
+  'history.title': 'Historique',
+  'history.empty': 'Aucune partie enregistrée.',
+  'history.win': 'Victoire',
+  'history.loss': 'Défaite',
+  'history.draw': 'Égalité',
+  'history.vs': 'vs',
+  'history.lineSolo': '{score} pts · reste {money} € · {date}',
+  'history.lineVs': '{score} – {oppScore} pts · reste {money} € · {date}',
+  'history.showDecks': 'Decks',
+  'history.hideDecks': 'Masquer',
+  'history.more': 'Voir plus',
+  'history.capped': 'Historique limité aux {n} dernières parties.',
+
+  // --- page amis ---
+  'me.viewPublicProfile': 'Voir mon profil public (stats & historique)',
+  'me.requestsReceived': 'Demandes reçues',
+  'me.noRequests': 'Aucune demande en attente.',
+  'me.accept': 'Accepter',
+  'me.decline': 'Refuser',
+  'me.requestsSent': 'Demandes envoyées',
+  'me.friends': 'Mes amis',
+  'me.noFriends': 'Pas encore d’amis — cherche un joueur ci-dessus pour l’ajouter.',
+  'me.remove': 'Retirer',
+
+  // --- bouton ami ---
+  'friend.add': 'Ajouter en ami',
+  'friend.sentCancel': 'Demande envoyée — Annuler',
+  'friend.acceptRequest': 'Accepter la demande d’ami',
+  'friend.friendsRemove': 'Amis ✓ — Retirer',
+
+  // --- erreurs serveur (codes SQL) ---
+  'errors.USERNAME_TAKEN': 'Ce pseudo est déjà pris.',
+  'errors.INVALID_USERNAME': '3 à 20 caractères : lettres, chiffres et _ uniquement.',
+  'errors.ALREADY_HAS_PROFILE': 'Ce compte a déjà un pseudo.',
+  'errors.ANONYMOUS_NOT_ALLOWED': 'Crée d’abord ton compte pour choisir un pseudo.',
+  'errors.NOT_AUTHENTICATED': 'Connexion perdue — recharge la page.',
+  'errors.GAME_NOT_FOUND': 'Partie introuvable.',
+  'errors.GAME_FULL': 'La partie est déjà complète.',
+  'errors.GAME_ALREADY_STARTED': 'La partie a déjà commencé.',
+  'errors.GAME_NOT_FINISHED': 'La partie n’est pas terminée.',
+  'errors.NICKNAME_REQUIRED': 'Choisis un pseudo.',
+  'errors.INVALID_SETTINGS': 'Réglages invalides.',
+  'errors.SETTINGS_LOCKED': 'Les réglages d’une partie publique sont figés.',
+  'errors.NOT_HOST': 'Seul l’hôte peut faire ça.',
+  'errors.NOT_A_PLAYER': 'Tu n’es pas dans cette partie.',
+  'errors.PLAYER_NOT_FOUND': 'Joueur introuvable.',
+  'errors.SELF_FRIENDSHIP': 'Tu ne peux pas t’ajouter toi-même.',
+  'errors.ALREADY_FRIENDS': 'Vous êtes déjà amis.',
+  'errors.REQUEST_NOT_FOUND': 'Demande introuvable.',
+  'errors.PROFILE_REQUIRED': 'Crée ton compte pour utiliser les amis.',
+
+  // --- erreurs Supabase Auth (messages anglais reconnus) ---
+  'errors.emailAlreadyRegistered': 'Cet email est déjà associé à un compte — connecte-toi plutôt.',
+  'errors.invalidCredentials': 'Email ou mot de passe incorrect.',
+  'errors.passwordTooShort': 'Mot de passe trop court (6 caractères minimum).',
+}

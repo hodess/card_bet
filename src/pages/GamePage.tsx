@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
+import { t } from '../i18n'
 import { useGame } from '../hooks/useGame'
 import { startBot } from '../lib/bot'
 import Lobby from '../components/Lobby'
@@ -18,7 +19,7 @@ export default function GamePage() {
     if (!botStop.current) botStop.current = startBot(code)
   }
 
-  if (state.loading) return <p className="center">Chargement…</p>
+  if (state.loading) return <p className="center">{t('common.loading')}</p>
   // partie invisible (visiteur bloqué par la RLS) ou purgée : on tente le résumé persistant
   if (!state.game) return <MatchSummary gameId={gameId!} />
   if (state.game.status === 'lobby') return <Lobby state={state} onAddBot={addBot} />

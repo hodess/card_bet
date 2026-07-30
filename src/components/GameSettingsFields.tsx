@@ -1,3 +1,5 @@
+import { useT } from '../hooks/useT'
+
 export type GameSettings = {
   deckSize: number
   startBankroll: number
@@ -5,11 +7,12 @@ export type GameSettings = {
   closeDelaySeconds: number
 }
 
-const FIELDS: { key: keyof GameSettings; label: string; min: number; max: number; step: number }[] = [
-  { key: 'deckSize', label: 'Cartes par deck', min: 1, max: 10, step: 1 },
-  { key: 'startBankroll', label: 'Bankroll de départ', min: 100, max: 100000, step: 100 },
-  { key: 'minBid', label: 'Mise minimale', min: 1, max: 1000, step: 5 },
-  { key: 'closeDelaySeconds', label: 'Délai d’adjudication (s)', min: 1, max: 60, step: 1 },
+// Le libellé vient de la clé `settings.<champ>` (cf. src/i18n/fr.ts).
+const FIELDS: { key: keyof GameSettings; min: number; max: number; step: number }[] = [
+  { key: 'deckSize', min: 1, max: 10, step: 1 },
+  { key: 'startBankroll', min: 100, max: 100000, step: 100 },
+  { key: 'minBid', min: 1, max: 1000, step: 5 },
+  { key: 'closeDelaySeconds', min: 1, max: 60, step: 1 },
 ]
 
 export default function GameSettingsFields({ value, onChange, disabled = false }: {
@@ -17,11 +20,12 @@ export default function GameSettingsFields({ value, onChange, disabled = false }
   onChange: (next: GameSettings) => void
   disabled?: boolean
 }) {
+  const { t } = useT()
   return (
     <div className="settings-grid">
       {FIELDS.map(f => (
         <label key={f.key} className="settings-field">
-          <span>{f.label}</span>
+          <span>{t(`settings.${f.key}`)}</span>
           <input
             type="number"
             value={value[f.key]}

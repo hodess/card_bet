@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
+import { useT } from '../hooks/useT'
 import config from '../config.json'
 import GameSettingsFields, { type GameSettings } from '../components/GameSettingsFields'
 import { createGame as createGameRpc, joinGameByCode, joinGameById } from '../lib/gameApi'
@@ -29,14 +30,13 @@ const DEFAULTS: GameSettings = {
 export default function HomePage() {
   const nav = useNavigate()
   const { profile } = useProfile()
+  const { t } = useT()
   const [nickname, setNickname] = useState('')
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [publicSetup, setPublicSetup] = useState(false)
   const [settings, setSettings] = useState<GameSettings>(DEFAULTS)
   const [board, setBoard] = useState<PublicGame[]>([])
-  const [query, setQuery] = useState('')
-  const [found, setFound] = useState<{ username: string }[]>([])
 
   useEffect(() => {
     let alive = true
@@ -48,18 +48,6 @@ export default function HomePage() {
     const id = setInterval(load, config.ui.boardPollMs)
     return () => { alive = false; clearInterval(id) }
   }, [])
-
-  // recherche de joueurs (debounce léger)
-  useEffect(() => {
-    if (query.trim().length < 2) { setFound([]); return }
-    let alive = true
-    const t = setTimeout(async () => {
-      const { data } = await supabase.from('profiles').select('username')
-        .ilike('username', `%${query.trim()}%`).limit(10)
-      if (alive) setFound(data ?? [])
-    }, config.ui.searchDebounceMs)
-    return () => { alive = false; clearTimeout(t) }
-  }, [query])
 
   // le pseudo du profil fait foi (le serveur l'impose de toute façon)
   const effectiveNickname = profile?.username ?? nickname
@@ -102,36 +90,36 @@ export default function HomePage() {
     <main className="page">
       <h1>CardBet</h1>
       {!profile && (
-        <input placeholder="Ton pseudo" value={nickname}
+        <input placeholder={t('home.nicknamePlaceholder')} value={nickname}
           onChange={e => setNickname(e.target.value)} />
       )}
 
       <button onClick={() => createGame('private')} disabled={noNick}>
-        Créer une partie privée
+        {t('home.createPrivate')}
       </button>
 
       {publicSetup ? (
         <section className="public-setup">
-          <h2>Partie publique — réglages</h2>
-          <p className="hint">Figés à la création : les joueurs du board les voient avant de rejoindre.</p>
+          <h2>{t('home.publicSettingsTitle')}</h2>
+          <p className="hint">{t('home.publicSettingsHint')}</p>
           <GameSettingsFields value={settings} onChange={setSettings} />
-          <button onClick={() => createGame('public')} disabled={noNick}>Publier la partie</button>
-          <button className="secondary" onClick={() => setPublicSetup(false)}>Annuler</button>
+          <button onClick={() => createGame('public')} disabled={noNick}>{t('home.publish')}</button>
+          <button className="secondary" onClick={() => setPublicSetup(false)}>{t('common.cancel')}</button>
         </section>
       ) : (
         <button className="secondary" onClick={() => setPublicSetup(true)}>
-          Créer une partie publique…
+          {t('home.createPublic')}
         </button>
       )}
 
       <hr />
-      <input placeholder="Code de partie" value={code}
+      <input placeholder={t('home.codePlaceholder')} value={code}
         onChange={e => setCode(e.target.value.toUpperCase())} maxLength={6} />
-      <button onClick={joinByCode} disabled={noNick || code.length !== 6}>Rejoindre par code</button>
+      <button onClick={joinByCode} disabled={noNick || code.length !== 6}>{t('home.joinByCode')}</button>
 
       <section className="board">
-        <h2>Parties publiques</h2>
-        {board.length === 0 && <p className="hint">Aucune partie ouverte pour l'instant.</p>}
+        <h2>{t('home.publicGames')}</h2>
+        {board.length === 0 && <p className="hint">{t('home.noPublicGames')}</p>}
         {board.map(g => (
           <div key={g.game_id} className="board-row">
             <div className="board-info">
@@ -139,26 +127,17 @@ export default function HomePage() {
                 ? <Link className="player-link" to={`/profile/${g.host_username}`}><strong>{g.host_username}</strong></Link>
                 : <strong>{g.host_nickname}</strong>}
               <span className="hint">
-                {g.deck_size} cartes · {g.start_bankroll} € · mise min {g.min_bid} · {g.close_delay_seconds} s
+                {t('home.gameSummary', {
+                  deck: g.deck_size,
+                  bankroll: g.start_bankroll,
+                  minBid: g.min_bid,
+                  delay: g.close_delay_seconds,
+                })}
               </span>
             </div>
-            <button onClick={() => joinPublic(g.game_id)} disabled={noNick}>Rejoindre</button>
+            <button onClick={() => joinPublic(g.game_id)} disabled={noNick}>{t('home.join')}</button>
           </div>
         ))}
-      </section>
-
-      <section className="board">
-        <h2>Trouver un joueur</h2>
-        <input placeholder="Rechercher un pseudo…" value={query}
-          onChange={e => setQuery(e.target.value)} />
-        {found.map(f => (
-          <div key={f.username} className="board-row">
-            <Link className="player-link" to={`/profile/${f.username}`}>{f.username}</Link>
-          </div>
-        ))}
-        {query.trim().length >= 2 && found.length === 0 && (
-          <p className="hint">Aucun joueur trouvé.</p>
-        )}
       </section>
 
       {error && <p className="error">{error}</p>}

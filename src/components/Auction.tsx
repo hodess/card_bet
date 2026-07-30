@@ -8,9 +8,11 @@ import Card from './Card'
 import TimerRing from './TimerRing'
 import BidButtons from './BidButtons'
 import PlayersStrip from './PlayersStrip'
+import { useT } from '../hooks/useT'
 
 export default function Auction({ state }: { state: GameState }) {
   const { game, players, auction, ownedCards, myPlayerId } = state
+  const { t } = useT()
   const gameId = game!.id
   const closeMs = game!.close_delay_seconds * 1000
   const capMs = game!.max_auction_seconds * 1000
@@ -48,7 +50,7 @@ export default function Auction({ state }: { state: GameState }) {
     if (error) console.warn(error.message)
   }
 
-  if (!auction) return <p className="center">Préparation de l'enchère…</p>
+  if (!auction) return <p className="center">{t('auction.preparing')}</p>
   const leader = players.find(p => p.id === auction.current_bidder)
 
   return (
@@ -56,7 +58,7 @@ export default function Auction({ state }: { state: GameState }) {
       <Card card={auction.card} />
       <TimerRing remaining={remaining} windowMs={windowMs} />
       <p className="current-bid">
-        <strong>{auction.current_bid} €</strong> — {leader?.nickname}{iLead && ' (toi)'}
+        <strong>{auction.current_bid} €</strong> — {leader?.nickname}{iLead && ` ${t('auction.you')}`}
       </p>
       <BidButtons
         currentBid={auction.current_bid}

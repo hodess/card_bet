@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Card, { type CardData } from './Card'
 import PlayerName from './PlayerName'
+import { useT } from '../hooks/useT'
+import { locale } from '../i18n'
 
 type SummaryPlayer = {
   seat: number
@@ -22,6 +24,7 @@ export default function MatchSummary({ gameId }: { gameId: string }) {
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState<Summary | null>(null)
   const [failed, setFailed] = useState(false)
+  const { t } = useT()
 
   useEffect(() => {
     let alive = true
@@ -59,24 +62,22 @@ export default function MatchSummary({ gameId }: { gameId: string }) {
     return () => { alive = false }
   }, [gameId])
 
-  if (loading) return <p className="center">Chargement…</p>
+  if (loading) return <p className="center">{t('common.loading')}</p>
   if (failed) {
     return (
       <main className="page">
-        <h1>Résumé indisponible</h1>
-        <p className="hint">Le chargement a échoué. Vérifie ta connexion et réessaie.</p>
-        <Link className="home-link" to="/">Accueil</Link>
+        <h1>{t('summary.unavailableTitle')}</h1>
+        <p className="hint">{t('summary.unavailableHint')}</p>
+        <Link className="home-link" to="/">{t('common.home')}</Link>
       </main>
     )
   }
   if (!summary) {
     return (
       <main className="page">
-        <h1>Partie introuvable ou non enregistrée</h1>
-        <p className="hint">
-          Le lien est peut-être erroné, ou la partie s'est jouée sans joueur à compte.
-        </p>
-        <Link className="home-link" to="/">Accueil</Link>
+        <h1>{t('summary.notFoundTitle')}</h1>
+        <p className="hint">{t('summary.notFoundHint')}</p>
+        <Link className="home-link" to="/">{t('common.home')}</Link>
       </main>
     )
   }
@@ -86,14 +87,17 @@ export default function MatchSummary({ gameId }: { gameId: string }) {
   return (
     <main className="page">
       <h1 className="podium-title">
-        {winner ? `🏆 ${winner.username ?? winner.nickname} a gagné !` : 'Égalité !'}
+        {winner
+          ? t('results.winnerPast', { name: winner.username ?? winner.nickname })
+          : t('results.tie')}
       </h1>
       {summary.players.map(p => (
         <section key={p.seat} className={`result-row${p.result === 'win' ? ' winner' : ''}`}>
           <h2>
             <PlayerName nickname={p.nickname} username={p.username} />
-            {p.isBot && <span className="badge"> bot</span>}
-            {' '}— {p.score} pts <small>(reste {p.moneyLeft} €)</small>
+            {p.isBot && <span className="badge"> {t('common.bot')}</span>}
+            {' '}{t('common.scoreLine', { score: p.score })}{' '}
+            <small>{t('common.moneyLeft', { money: p.moneyLeft })}</small>
           </h2>
           <div className="mini-cards">
             {summary.cards.filter(c => c.seat === p.seat).map(c => (
@@ -102,8 +106,10 @@ export default function MatchSummary({ gameId }: { gameId: string }) {
           </div>
         </section>
       ))}
-      <p className="hint">Partie du {new Date(summary.finishedAt).toLocaleDateString('fr-FR')}</p>
-      <Link className="home-link" to="/">Accueil</Link>
+      <p className="hint">
+        {t('summary.playedOn', { date: new Date(summary.finishedAt).toLocaleDateString(locale()) })}
+      </p>
+      <Link className="home-link" to="/">{t('common.home')}</Link>
     </main>
   )
 }

@@ -1,0 +1,175 @@
+// English dictionary. Mêmes clés que fr.ts, même ordre.
+export const en: Record<string, string> = {
+  // --- commun ---
+  'common.loading': 'Loading…',
+  'common.connecting': 'Connecting…',
+  'common.home': 'Home',
+  'common.cancel': 'Cancel',
+  'common.wait': 'Please wait…',
+  'common.player': 'Player',
+  'common.bot': 'bot',
+  'common.scoreLine': '— {score} pts',
+  'common.moneyLeft': '({money} € left)',
+
+  // --- navigation ---
+  'nav.menu': 'Menu',
+  'nav.home': 'Home',
+  'nav.myProfile': 'My profile',
+  'nav.myFriends': 'My friends',
+  'nav.signOut': 'Sign out',
+  'nav.signUp': 'Create an account',
+  'nav.signIn': 'Sign in',
+  'nav.language': 'Language',
+
+  // --- accueil ---
+  'home.nicknamePlaceholder': 'Your nickname',
+  'home.createPrivate': 'Create a private game',
+  'home.createPublic': 'Create a public game…',
+  'home.publicSettingsTitle': 'Public game — settings',
+  'home.publicSettingsHint': 'Locked at creation: players see them on the board before joining.',
+  'home.publish': 'Publish the game',
+  'home.codePlaceholder': 'Game code',
+  'home.joinByCode': 'Join with a code',
+  'home.publicGames': 'Public games',
+  'home.noPublicGames': 'No open game right now.',
+  'home.gameSummary': '{deck} cards · {bankroll} € · min bid {minBid} · {delay}s',
+  'home.join': 'Join',
+
+  // --- recherche de joueurs ---
+  'search.title': 'Find a player',
+  'search.placeholder': 'Search for a nickname…',
+  'search.none': 'No player found.',
+
+  // --- compte ---
+  'auth.myAccount': 'My account',
+  'auth.signedInAs': 'Signed in as {username}.',
+  'auth.myProfile': 'My profile',
+  'auth.signupTitle': 'Create my account',
+  'auth.loginTitle': 'Sign in',
+  'auth.signupPitch': 'Your account keeps your nickname, your history and your friends.',
+  'auth.email': 'Email',
+  'auth.password': 'Password (6 characters min.)',
+  'auth.submitSignup': 'Create my account',
+  'auth.submitLogin': 'Sign in',
+  'auth.googleSignup': 'Continue with Google',
+  'auth.googleLogin': 'Sign in with Google',
+  'auth.googleAlreadyLinked': 'This Google account is already linked to a CardBet account.',
+  'auth.googleSignInWithIt': 'Sign in with this Google account',
+  'auth.googleFailed': 'Google sign-in failed.',
+  'auth.toLogin': 'Already have an account? Sign in',
+  'auth.toSignup': 'No account yet? Create one',
+  'auth.chooseUsername': 'Choose your nickname',
+  'auth.usernameHint': 'Unique and permanent: it’s what players see in game and on your profile.',
+  'auth.usernamePlaceholder': 'Nickname (3-20: letters, digits, _)',
+  'auth.validate': 'Confirm',
+
+  // --- salon ---
+  'lobby.title': 'Lobby',
+  'lobby.private': 'Private',
+  'lobby.public': 'Public',
+  'lobby.code': 'Game code:',
+  'lobby.host': '(host)',
+  'lobby.settings': 'Settings',
+  'lobby.settingsReadOnly': 'Settings (read-only)',
+  'lobby.saving': 'Saving…',
+  'lobby.saveSettings': 'Save settings',
+  'lobby.addBot': '+ Add a bot',
+  'lobby.botComing': 'Bot on its way…',
+  'lobby.start': 'Start',
+  'lobby.waitingHost': 'Waiting for the host…',
+
+  // --- réglages de partie ---
+  'settings.deckSize': 'Cards per deck',
+  'settings.startBankroll': 'Starting bankroll',
+  'settings.minBid': 'Minimum bid',
+  'settings.closeDelaySeconds': 'Closing delay (s)',
+
+  // --- enchère ---
+  'auction.preparing': 'Preparing the auction…',
+  'auction.you': '(you)',
+  'auction.max': 'Max {n}',
+  'auction.pass': 'Pass',
+  'auction.passed': 'You passed',
+  'auction.chipPassed': 'passed',
+  'auction.chipLeading': 'leading',
+
+  // --- résultats ---
+  'results.tie': 'Draw!',
+  'results.winner': '🏆 {name} wins!',
+  'results.winnerPast': '🏆 {name} won!',
+  'results.rematchPropose': 'Propose a rematch',
+  'results.rematchJoin': 'Rematch proposed — Join',
+
+  // --- résumé public de partie ---
+  'summary.unavailableTitle': 'Summary unavailable',
+  'summary.unavailableHint': 'Loading failed. Check your connection and try again.',
+  'summary.notFoundTitle': 'Game not found or not recorded',
+  'summary.notFoundHint': 'The link may be wrong, or the game was played without a registered player.',
+  'summary.playedOn': 'Game played on {date}',
+
+  // --- profil public ---
+  'profile.notFound': 'Profile not found',
+  'profile.stats': '{games} ranked games · {wins} W / {losses} L / {draws} D',
+  'profile.statsHint': 'Only games between registered players count towards stats.',
+  'profile.h2hTitle': 'Head-to-head',
+  'profile.h2h': '{games} games: {wins} W / {losses} L / {draws} D (from your point of view)',
+  'profile.createAccount': 'Create your account',
+  'profile.toAddFriend': 'to add them as a friend.',
+
+  // --- historique ---
+  'history.title': 'History',
+  'history.empty': 'No recorded game.',
+  'history.win': 'Win',
+  'history.loss': 'Loss',
+  'history.draw': 'Draw',
+  'history.vs': 'vs',
+  'history.lineSolo': '{score} pts · {money} € left · {date}',
+  'history.lineVs': '{score} – {oppScore} pts · {money} € left · {date}',
+  'history.showDecks': 'Decks',
+  'history.hideDecks': 'Hide',
+  'history.more': 'Show more',
+  'history.capped': 'History limited to the last {n} games.',
+
+  // --- page amis ---
+  'me.viewPublicProfile': 'View my public profile (stats & history)',
+  'me.requestsReceived': 'Friend requests',
+  'me.noRequests': 'No pending request.',
+  'me.accept': 'Accept',
+  'me.decline': 'Decline',
+  'me.requestsSent': 'Sent requests',
+  'me.friends': 'My friends',
+  'me.noFriends': 'No friends yet — search for a player above to add them.',
+  'me.remove': 'Remove',
+
+  // --- bouton ami ---
+  'friend.add': 'Add friend',
+  'friend.sentCancel': 'Request sent — Cancel',
+  'friend.acceptRequest': 'Accept friend request',
+  'friend.friendsRemove': 'Friends ✓ — Remove',
+
+  // --- erreurs serveur (codes SQL) ---
+  'errors.USERNAME_TAKEN': 'This nickname is already taken.',
+  'errors.INVALID_USERNAME': '3 to 20 characters: letters, digits and _ only.',
+  'errors.ALREADY_HAS_PROFILE': 'This account already has a nickname.',
+  'errors.ANONYMOUS_NOT_ALLOWED': 'Create your account first to pick a nickname.',
+  'errors.NOT_AUTHENTICATED': 'Connection lost — reload the page.',
+  'errors.GAME_NOT_FOUND': 'Game not found.',
+  'errors.GAME_FULL': 'This game is already full.',
+  'errors.GAME_ALREADY_STARTED': 'This game has already started.',
+  'errors.GAME_NOT_FINISHED': 'This game is not finished.',
+  'errors.NICKNAME_REQUIRED': 'Pick a nickname.',
+  'errors.INVALID_SETTINGS': 'Invalid settings.',
+  'errors.SETTINGS_LOCKED': 'The settings of a public game are locked.',
+  'errors.NOT_HOST': 'Only the host can do that.',
+  'errors.NOT_A_PLAYER': 'You are not in this game.',
+  'errors.PLAYER_NOT_FOUND': 'Player not found.',
+  'errors.SELF_FRIENDSHIP': 'You cannot add yourself.',
+  'errors.ALREADY_FRIENDS': 'You are already friends.',
+  'errors.REQUEST_NOT_FOUND': 'Request not found.',
+  'errors.PROFILE_REQUIRED': 'Create your account to use friends.',
+
+  // --- erreurs Supabase Auth (messages anglais reconnus) ---
+  'errors.emailAlreadyRegistered': 'This email is already linked to an account — sign in instead.',
+  'errors.invalidCredentials': 'Wrong email or password.',
+  'errors.passwordTooShort': 'Password too short (6 characters minimum).',
+}

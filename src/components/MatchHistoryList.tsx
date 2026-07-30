@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import config from '../config.json'
 import Card, { type CardData } from './Card'
+import { useT } from '../hooks/useT'
+import { locale } from '../i18n'
 
 type HistoryRow = {
   matchId: string
@@ -14,13 +16,12 @@ type HistoryRow = {
 }
 type DeckCard = { seat: number; price_paid: number; card: CardData & { id: number } }
 
-const RESULT_LABEL = { win: 'Victoire', loss: 'Défaite', draw: 'Égalité' } as const
-
 // L'historique d'un profil : liste paginée + decks dépliables.
 export default function MatchHistoryList({ profileId }: { profileId: string }) {
   const [history, setHistory] = useState<HistoryRow[]>([])
   const [pages, setPages] = useState(1)
   const [decks, setDecks] = useState<Record<string, DeckCard[]>>({})
+  const { t } = useT()
 
   const load = useCallback(async () => {
     const { data: mine } = await supabase.from('match_players')
@@ -70,21 +71,26 @@ export default function MatchHistoryList({ profileId }: { profileId: string }) {
 
   return (
     <section className="board">
-      <h2>Historique</h2>
-      {history.length === 0 && <p className="hint">Aucune partie enregistrée.</p>}
-      {history.slice(0, pages * config.ui.historyPageSize).map(r => (
+      <h2>{t('history.title')}</h2>
+      {history.length === 0 && <p className="hint">{t('history.empty')}</p>}
+      {history.slice(0, pages * config.ui.historyPageSize).map(r => {
+        const date = r.finishedAt ? new Date(r.finishedAt).toLocaleDateString(locale()) : ''
+        return (
         <div key={r.matchId} className="board-row">
           <div className="board-info">
-            <strong>{RESULT_LABEL[r.result]}</strong>
-            {' '}vs{' '}
+            <strong>{t(`history.${r.result}`)}</strong>
+            {' '}{t('history.vs')}{' '}
             {r.opponent
               ? r.opponent.username
                 ? <Link className="player-link" to={`/profile/${r.opponent.username}`}>{r.opponent.username}</Link>
-                : <>{r.opponent.nickname}{r.opponent.isBot && <span className="badge"> bot</span>}</>
+                : <>{r.opponent.nickname}{r.opponent.isBot && <span className="badge"> {t('common.bot')}</span>}</>
               : '?'}
             <span className="hint">
-              {r.score}{r.opponent ? ` – ${r.opponent.score}` : ''} pts · reste {r.moneyLeft} € ·{' '}
-              {r.finishedAt && new Date(r.finishedAt).toLocaleDateString('fr-FR')}
+              {r.opponent
+                ? t('history.lineVs', {
+                    score: r.score, oppScore: r.opponent.score, money: r.moneyLeft, date,
+                  })
+                : t('history.lineSolo', { score: r.score, money: r.moneyLeft, date })}
             </span>
             {decks[r.matchId] && (
               <div className="mini-cards">
@@ -95,15 +101,16 @@ export default function MatchHistoryList({ profileId }: { profileId: string }) {
             )}
           </div>
           <button className="secondary" onClick={() => toggleDeck(r.matchId)}>
-            {decks[r.matchId] ? 'Masquer' : 'Decks'}
+            {decks[r.matchId] ? t('history.hideDecks') : t('history.showDecks')}
           </button>
         </div>
-      ))}
+        )
+      })}
       {history.length > pages * config.ui.historyPageSize && (
-        <button className="secondary" onClick={() => setPages(p => p + 1)}>Voir plus</button>
+        <button className="secondary" onClick={() => setPages(p => p + 1)}>{t('history.more')}</button>
       )}
       {history.length >= config.ui.historyCap && (
-        <p className="hint">Historique limité aux {config.ui.historyCap} dernières parties.</p>
+        <p className="hint">{t('history.capped', { n: config.ui.historyCap })}</p>
       )}
     </section>
   )

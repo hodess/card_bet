@@ -5,9 +5,11 @@ import GameSettingsFields, { type GameSettings } from './GameSettingsFields'
 import PlayerName from './PlayerName'
 import { useUsernames } from '../hooks/useUsernames'
 import { errorMessage } from '../lib/errors'
+import { useT } from '../hooks/useT'
 
 export default function Lobby({ state, onAddBot }: { state: GameState; onAddBot: (code: string) => void }) {
   const { game, players, myPlayerId } = state
+  const { t } = useT()
   const isHost = players.find(p => p.id === myPlayerId)?.seat === 0
   const usernames = useUsernames(players.map(p => p.auth_uid))
   const isPrivate = game!.visibility === 'private'
@@ -60,35 +62,35 @@ export default function Lobby({ state, onAddBot }: { state: GameState; onAddBot:
 
   return (
     <main className="page">
-      <h1>Salon <span className="badge">{isPrivate ? 'Privée' : 'Publique'}</span></h1>
-      <p>Code de la partie : <strong className="code">{game!.code}</strong></p>
+      <h1>{t('lobby.title')} <span className="badge">{isPrivate ? t('lobby.private') : t('lobby.public')}</span></h1>
+      <p>{t('lobby.code')} <strong className="code">{game!.code}</strong></p>
       <ul className="player-list">
         {players.map(p => (
           <li key={p.id}>
             <PlayerName nickname={p.nickname} username={usernames[p.auth_uid]} />
-            {p.seat === 0 && ' (hôte)'}
+            {p.seat === 0 && ` ${t('lobby.host')}`}
           </li>
         ))}
       </ul>
 
       <section className="public-setup">
-        <h2>Réglages {canEdit ? '' : '(lecture seule)'}</h2>
+        <h2>{canEdit ? t('lobby.settings') : t('lobby.settingsReadOnly')}</h2>
         <GameSettingsFields value={draft} onChange={setDraft} disabled={!canEdit} />
         {canEdit && (
           <button className="secondary" onClick={saveSettings} disabled={saving}>
-            {saving ? 'Enregistrement…' : 'Enregistrer les réglages'}
+            {saving ? t('lobby.saving') : t('lobby.saveSettings')}
           </button>
         )}
       </section>
 
       {isHost && players.length < 2 && (
         <button className="secondary" onClick={addBot} disabled={botRequested}>
-          {botRequested ? 'Bot en route…' : '+ Ajouter un bot'}
+          {botRequested ? t('lobby.botComing') : t('lobby.addBot')}
         </button>
       )}
       {isHost
-        ? <button onClick={start} disabled={players.length < 2}>Démarrer</button>
-        : <p>En attente de l'hôte…</p>}
+        ? <button onClick={start} disabled={players.length < 2}>{t('lobby.start')}</button>
+        : <p>{t('lobby.waitingHost')}</p>}
       {error && <p className="error">{error}</p>}
     </main>
   )

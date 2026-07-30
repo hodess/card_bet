@@ -2,8 +2,10 @@ import { HashRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { useEffect, useState, type ReactNode } from 'react'
 import { ensureSession } from './lib/supabase'
 import { captureAuthError, peekAuthError } from './lib/authError'
+import { t } from './i18n'
 import { useProfile } from './hooks/useProfile'
 import NavMenu from './components/NavMenu'
+import LangSwitch from './components/LangSwitch'
 import HomePage from './pages/HomePage'
 import GamePage from './pages/GamePage'
 import AuthPage from './pages/AuthPage'
@@ -34,11 +36,14 @@ function UsernameGate({ children }: { children: ReactNode }) {
 export default function App() {
   const [ready, setReady] = useState(false)
   useEffect(() => { ensureSession().then(() => setReady(true)) }, [])
-  if (!ready) return <p className="center">Connexion…</p>
+  // `t` direct (pas useT) : cet écran disparaît dès que la session est prête,
+  // aucun changement de langue n'est possible avant.
+  if (!ready) return <p className="center">{t('common.connecting')}</p>
   return (
     <HashRouter>
       <AuthErrorRedirect />
       <NavMenu />
+      <LangSwitch />
       <UsernameGate>
         <Routes>
           <Route path="/" element={<HomePage />} />
