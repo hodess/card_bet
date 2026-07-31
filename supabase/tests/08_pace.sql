@@ -28,6 +28,9 @@ select is((select count(*)::int from auctions where seq = 2 and status = 'open')
 
 -- 2. le meneur (ouverture forcée p2 sur seq 2) ne peut pas passer
 select is((select current_bidder from auctions where seq = 2), (select p2 from ids), 'seq 2 forcée p2');
+-- sursis de révélation consommé : ce test-ci porte sur les règles, pas sur l'attente
+update auctions set opened_at = now() - interval '1 second',
+                    last_bid_at = now() - interval '1 second' where seq = 2;
 select throws_ok(format($$select pass_auction(%L)$$, (select gid from t)),
   'P0001', 'LEADER_CANNOT_PASS', 'le meneur ne passe pas');
 

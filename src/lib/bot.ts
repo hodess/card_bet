@@ -65,6 +65,8 @@ export function startBot(gameCode: string): () => void {
       const auction = auctionRes.data?.[0]
       const me = playersRes.data?.find(p => p.auth_uid === botUid)
       if (game.status !== 'playing' || !auction || auction.status !== 'open' || !me) return
+      // sursis de révélation : le serveur refuse mises et passes avant l'ouverture
+      if (new Date(auction.opened_at).getTime() > Date.now()) return
       if (auction.passed.includes(me.id)) return
 
       const myCards = (cardsRes.data ?? []).filter(c => c.player_id === me.id).length

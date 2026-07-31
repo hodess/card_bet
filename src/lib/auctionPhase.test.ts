@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import config from '../config.json'
 import {
-  canFly, flyTransform, isUrgent, nextPhase, phaseDuration, pipStates, showPips,
+  canFly, flyTransform, isUrgent, nextPhase, phaseDuration, pipStates, SEQUENCE_MS,
+  showPips, venteDe,
 } from './auctionPhase'
 
 const A = config.ui.auction
@@ -25,6 +26,30 @@ describe('phaseDuration', () => {
   })
   it('donne 0 pour bid : la durée vient du serveur, pas d\'un timer', () => {
     expect(phaseDuration('bid')).toBe(0)
+  })
+})
+
+describe('SEQUENCE_MS', () => {
+  // Contrat avec la migration `v1_3_reveal_grace` : le serveur retarde de
+  // 3 000 ms le démarrage de l'enchère suivante. Si les durées d'animation
+  // changent, ce test tombe et la migration doit suivre.
+  it('vaut le sursis de révélation appliqué par le serveur (3 s)', () => {
+    expect(SEQUENCE_MS).toBe(3000)
+    expect(SEQUENCE_MS).toBe(A.soldMs + A.flyMs + A.landedMs + A.revealMs)
+  })
+})
+
+describe('venteDe', () => {
+  const owned = [
+    { card_id: 7, player_id: 'p1', price_paid: 120 },
+    { card_id: 9, player_id: 'p2', price_paid: 40 },
+  ]
+  it('rend le gagnant et le prix payés par le serveur', () => {
+    expect(venteDe(owned, 9)).toEqual({ winnerId: 'p2', amount: 40 })
+  })
+  it('rend null tant que la carte n\'est pas adjugée', () => {
+    expect(venteDe(owned, 3)).toBeNull()
+    expect(venteDe([], 7)).toBeNull()
   })
 })
 

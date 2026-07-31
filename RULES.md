@@ -49,7 +49,11 @@ L'objectif de design est que ça reste rapide (ordre de grandeur : 2 à 3 minute
    - le plafond de 60 secondes est atteint ;
    - **plus aucun joueur ne peut ou ne veut surenchérir** (tous ont passé, ou leur
      réserve ne permet plus de suivre) : adjudication **immédiate**, sans attendre.
-7. La carte suivante apparaît.
+7. L'adjudication est **jouée à l'écran** (tampon « Adjugé », la carte rejoint le deck
+   du gagnant), puis la carte suivante apparaît. Pendant ces 3 secondes, la nouvelle
+   enchère est **en pause** : on ne peut ni miser ni passer, et son compte à rebours ne
+   démarre qu'une fois la carte posée — on n'enchérit pas sur une carte qu'on ne voit
+   pas.
 
 ## 4. Règle de réserve
 
