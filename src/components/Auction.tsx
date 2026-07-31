@@ -27,10 +27,15 @@ export default function Auction({ state, onSequenceChange }: {
   const capDeadline = auction ? new Date(auction.opened_at).getTime() + capMs : null
   const deadline = delayDeadline !== null && capDeadline !== null ? Math.min(delayDeadline, capDeadline) : null
   const windowMs = capDeadline !== null && deadline === capDeadline ? capMs : closeMs
-  const remaining = useCountdown(deadline, offset)
+  // Sursis de révélation : le serveur ouvre l'enchère suivante avec une échéance
+  // décalée d'une séquence d'adjudication entière. On borne l'affichage à la
+  // fenêtre pour montrer un chrono plein et à l'arrêt pendant l'animation,
+  // plutôt qu'un compte à rebours de 6 s sur une fenêtre de 3 s.
+  const restant = useCountdown(deadline, offset)
+  const remaining = Math.min(restant, windowMs)
   const expired = remaining <= 0
 
-  const anim = useAuctionPhase(auction)
+  const anim = useAuctionPhase(auction, ownedCards)
 
   const me = players.find(p => p.id === myPlayerId)
   const missing = game!.deck_size - cardsOf(ownedCards, myPlayerId).length
@@ -38,7 +43,9 @@ export default function Auction({ state, onSequenceChange }: {
   const iPassed = !!(myPlayerId && auction?.passed.includes(myPlayerId))
   const myMax = me ? maxBid(me.bankroll, missing, game!.min_bid) : 0
   const closed = anim.phase === 'sold' || anim.phase === 'fly' || anim.phase === 'landed'
-  const cantAct = iLead || iPassed || missing <= 0 || expired || closed
+  // Adjudication puis entrée de la carte : le serveur refuse toute action tant
+  // que l'enchère n'a pas démarré (AUCTION_NOT_STARTED), l'interface aussi.
+  const cantAct = iLead || iPassed || missing <= 0 || expired || closed || anim.phase === 'reveal'
 
   // Fin du compte à rebours, ou partie terminée par le serveur : on lance la
   // séquence d'adjudication et on demande la clôture (le serveur reste l'arbitre).

@@ -493,7 +493,10 @@ export type Database = {
         Returns: Json
       }
       list_public_games: { Args: never; Returns: Json }
-      open_next_auction: { Args: { g_id: string }; Returns: undefined }
+      open_next_auction: {
+        Args: { g_id: string; p_grace?: boolean }
+        Returns: undefined
+      }
       pass_auction: { Args: { g_id: string }; Returns: undefined }
       place_bid: { Args: { amount: number; g_id: string }; Returns: undefined }
       profile_id_of: { Args: { p_username: string }; Returns: string }

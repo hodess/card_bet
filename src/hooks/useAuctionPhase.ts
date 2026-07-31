@@ -1,15 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
-import type { AuctionWithCard } from './useGame'
+import type { AuctionWithCard, OwnedCard } from './useGame'
 import type { CardData } from '../components/Card'
 import {
-  canFly, FLOAT_MS, flyTransform, phaseDuration, type Box, type Phase,
+  canFly, FLOAT_MS, flyTransform, phaseDuration, venteDe, type Box, type Phase,
 } from '../lib/auctionPhase'
 
 // Carte gelée le temps de la séquence d'adjudication : `useGame` recharge tout à
 // chaque événement realtime, donc la ligne player_cards (et même l'enchère
 // suivante) peut arriver avant la fin du vol. On continue d'afficher celle-ci.
-type Sortante = { auctionId: string; card: CardData; winnerId: string; amount: number }
+// `leaderPredit`/`misePredite` ne servent qu'à l'affichage entre le tampon
+// « Adjugé » et la confirmation serveur : le gagnant, lui, vient de player_cards.
+type Sortante = {
+  auctionId: string
+  cardId: number
+  card: CardData
+  leaderPredit: string
+  misePredite: number
+}
 
 export type AuctionPhase = {
   phase: Phase
@@ -42,7 +50,10 @@ function cleAdjuge(a: AuctionWithCard): string {
   return `${a.id}:${a.last_bid_at}`
 }
 
-export function useAuctionPhase(auction: AuctionWithCard | null): AuctionPhase {
+export function useAuctionPhase(
+  auction: AuctionWithCard | null,
+  ownedCards: OwnedCard[],
+): AuctionPhase {
   const [phase, setPhase] = useState<Phase>('bid')
   const [sortante, setSortante] = useState<Sortante | null>(null)
   const [flyStyle, setFlyStyle] = useState<string | null>(null)
@@ -60,6 +71,18 @@ export function useAuctionPhase(auction: AuctionWithCard | null): AuctionPhase {
   // `expired` vrai, l'appelant rappellerait alors startSold en boucle.
   const dernierAdjuge = useRef<string | null>(null)
 
+  // Adjudication telle que le serveur l'a écrite. Tant qu'elle n'est pas
+  // arrivée, on affiche le tampon mais on ne fait pas décoller la carte : sa
+  // destination ne serait qu'une supposition.
+  const vente = useMemo(
+    () => (sortante ? venteDe(ownedCards, sortante.cardId) : null),
+    [ownedCards, sortante],
+  )
+  // Dépendances d'effet en valeurs primitives : `ownedCards` est un tableau neuf
+  // à chaque événement temps réel et relancerait les timers de la séquence.
+  const gagnantId = vente?.winnerId ?? null
+  const montant = vente?.amount ?? null
+
   const setDeckRef = useCallback((playerId: string, el: HTMLDivElement | null) => {
     if (el) deckRefs.current.set(playerId, el)
     else deckRefs.current.delete(playerId)
@@ -71,9 +94,10 @@ export function useAuctionPhase(auction: AuctionWithCard | null): AuctionPhase {
     dernierAdjuge.current = cleAdjuge(a)
     setSortante({
       auctionId: a.id,
+      cardId: a.card_id,
       card: a.card,
-      winnerId: a.current_bidder,
-      amount: a.current_bid,
+      leaderPredit: a.current_bidder,
+      misePredite: a.current_bid,
     })
     setPhase('sold')
   }, [])
@@ -86,29 +110,39 @@ export function useAuctionPhase(auction: AuctionWithCard | null): AuctionPhase {
     demarrerSold(auction)
   }, [auction, sortante, demarrerSold])
 
-  // sold → fly : on mesure au dernier moment, la mise en page est stabilisée
+  // Fausse alerte : le compte à rebours local avait expiré, mais le serveur a
+  // accepté une mise de plus (horloges décalées). L'enchère continue.
   useEffect(() => {
-    if (phase !== 'sold') return
+    if (!auction || !sortante || gagnantId) return
+    if (sortante.auctionId !== auction.id || dernierAdjuge.current === cleAdjuge(auction)) return
+    setSortante(null)
+    setPhase('bid')
+  }, [auction, sortante, gagnantId])
+
+  // sold → fly : on attend le gagnant confirmé (c'est la cible du vol), puis on
+  // mesure au dernier moment, la mise en page est stabilisée.
+  useEffect(() => {
+    if (phase !== 'sold' || !gagnantId) return
     const id = setTimeout(() => {
       const carte = boxOf(cardRef.current)
-      const cible = boxOf(sortante ? deckRefs.current.get(sortante.winnerId) : null)
+      const cible = boxOf(deckRefs.current.get(gagnantId))
       setFlyStyle(carte && cible && canFly(cible, window.innerHeight)
         ? flyTransform(carte, cible)
         : null)
       setPhase('fly')
     }, phaseDuration('sold'))
     return () => clearTimeout(id)
-  }, [phase, sortante])
+  }, [phase, gagnantId])
 
   // fly → landed : le deck du gagnant se met à jour maintenant, pas avant
   useEffect(() => {
     if (phase !== 'fly') return
     const id = setTimeout(() => {
-      if (sortante) setJustWon({ playerId: sortante.winnerId, amount: sortante.amount })
+      if (gagnantId && montant !== null) setJustWon({ playerId: gagnantId, amount: montant })
       setPhase('landed')
     }, phaseDuration('fly'))
     return () => clearTimeout(id)
-  }, [phase, sortante])
+  }, [phase, gagnantId, montant])
 
   // landed → carte suivante. Si l'enchère suivante est déjà arrivée, on enchaîne
   // sur son animation d'entrée. Sinon on reste en `landed` : la carte y est à
@@ -139,7 +173,7 @@ export function useAuctionPhase(auction: AuctionWithCard | null): AuctionPhase {
     const avant = precedente.current
     // Toujours la dernière version vue de la ligne : une surenchère met à jour
     // l'enchère en place, et c'est cette version-là dont l'adjudication
-    // rétroactive a besoin (bon gagnant, bon montant, bonne clé).
+    // rétroactive a besoin (bonne carte, bonne clé).
     precedente.current = auction
     if (avant?.id === auction.id) return
     const premier = avant === null
@@ -156,8 +190,8 @@ export function useAuctionPhase(auction: AuctionWithCard | null): AuctionPhase {
       return
     }
     // Le serveur a pu adjuger sans que le compte à rebours local expire (plus
-    // aucun challenger). On joue alors la séquence rétroactivement, avec les
-    // données de la carte précédente.
+    // aucun challenger). On joue alors la séquence rétroactivement, avec la
+    // carte précédente — son gagnant, lui, vient de player_cards.
     if (avant && dernierAdjuge.current !== cleAdjuge(avant)) {
       demarrerSold(avant)
       return
@@ -188,12 +222,13 @@ export function useAuctionPhase(auction: AuctionWithCard | null): AuctionPhase {
   return {
     phase,
     card: sortante?.card ?? auction?.card ?? null,
-    leaderId: phase === 'reveal' ? null : (sortante?.winnerId ?? auction?.current_bidder ?? null),
-    bid: sortante?.amount ?? auction?.current_bid ?? 0,
+    leaderId: phase === 'reveal' ? null
+      : (gagnantId ?? sortante?.leaderPredit ?? auction?.current_bidder ?? null),
+    bid: montant ?? sortante?.misePredite ?? auction?.current_bid ?? 0,
     raise: phase === 'bid' ? raise : null,
     flyStyle: phase === 'fly' ? flyStyle : null,
     justWon,
-    pendingWinnerId: avantAtterrissage ? (sortante?.winnerId ?? null) : null,
+    pendingWinnerId: avantAtterrissage ? gagnantId : null,
     sequenceEnCours: sortante !== null,
     cardRef,
     setDeckRef,

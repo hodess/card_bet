@@ -15,6 +15,27 @@ export type PipState = 'won' | 'current' | 'todo'
 // Durée de vie des animations « one-shot » (bulle +X €, −X €).
 export const FLOAT_MS = A.floatMs
 
+// Durée totale de la séquence d'adjudication, du tampon « Adjugé » à la carte
+// suivante posée. Le serveur applique exactement ce sursis avant de démarrer
+// l'enchère suivante (migration `v1_3_reveal_grace`) : sans lui, le compte à
+// rebours de la carte suivante s'écoulait pendant l'animation. Les deux valeurs
+// doivent rester égales — un test verrouille celle-ci.
+export const SEQUENCE_MS = A.soldMs + A.flyMs + A.landedMs + A.revealMs
+
+// Vérité serveur d'une adjudication : la ligne `player_cards` de la carte.
+// Le client ne devine jamais le gagnant. Une mise acceptée juste avant la
+// clôture peut ne jamais lui parvenir (`useGame` ne lit que la dernière
+// enchère) : il ferait alors voler la carte vers le mauvais deck.
+export type Vente = { winnerId: string; amount: number }
+
+export function venteDe(
+  ownedCards: { card_id: number; player_id: string; price_paid: number }[],
+  cardId: number,
+): Vente | null {
+  const ligne = ownedCards.find(c => c.card_id === cardId)
+  return ligne ? { winnerId: ligne.player_id, amount: ligne.price_paid } : null
+}
+
 const DURATIONS: Record<Phase, number> = {
   reveal: A.revealMs,
   bid: 0,
