@@ -7,6 +7,8 @@
   --muted: #8a93ad;
   --accent: #e8c34a;
   --danger: #d05252;
+  --surface: #151d33;
+  --border: #222c46;
   --gold1: #f5d76e; --gold2: #b8860b;
   --silver1: #dfe3ea; --silver2: #7d8494;
   --bronze1: #d29a68; --bronze2: #7a4a24;
@@ -14,7 +16,7 @@
 * { box-sizing: border-box; }
 body {
   margin: 0; display: flex; justify-content: center; color: var(--text);
-  background: radial-gradient(ellipse at 50% -20%, var(--bg2), var(--bg) 70%);
+  background: radial-gradient(ellipse at 50% -18%, #1c2742, #0b1120 62%);
   min-height: 100vh;
 }
 #root { width: 100%; max-width: 480px; padding: 1rem; }
@@ -62,40 +64,89 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 .fut-card.mini .fut-name { font-size: 0.62rem; }
 .fut-price { font-size: 0.6rem; opacity: 0.8; }
 
-/* ----- Timer ----- */
-.timer-ring { position: relative; width: 84px; height: 84px; margin: -0.4rem auto 0; }
-.timer-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-.ring-bg { fill: none; stroke: #2c3654; stroke-width: 7; }
+/* ----- Timer (anneau rectangulaire autour de la carte) ----- */
+.timer-ring { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ring-bg { fill: none; stroke: #1e2942; stroke-width: 4; }
 .ring-fg {
-  fill: none; stroke: var(--accent); stroke-width: 7; stroke-linecap: round;
-  transition: stroke-dashoffset 0.1s linear;
+  fill: none; stroke: var(--pc); stroke-width: 4; stroke-linecap: round;
+  transition: stroke-dashoffset 0.06s linear, stroke 0.2s;
 }
-.ring-label {
-  position: absolute; inset: 0; display: grid; place-items: center;
-  font-size: 1.25rem; font-variant-numeric: tabular-nums; font-weight: 700;
+.timer-ring.urgent .ring-fg {
+  stroke: var(--danger);
+  animation: urgent 0.5s steps(1, end) infinite;
 }
-.current-bid { text-align: center; margin: 0; font-size: 1.1rem; }
-.current-bid strong { color: var(--accent); font-size: 1.4rem; }
 
 /* ----- Boutons de mise ----- */
-.bid-buttons { display: flex; gap: 0.5rem; }
-.chip { flex: 1; padding: 1.1rem 0; border-radius: 999px; font-size: 1.05rem; }
-.chip.max { background: linear-gradient(160deg, var(--gold1), var(--gold2)); }
-.pass { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+.bid-zone { display: flex; flex-direction: column; gap: 8px; }
+.bid-help {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 8px; margin: 0;
+}
+.bid-help span {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted);
+}
+.bid-help strong {
+  letter-spacing: 0; font-weight: 800; color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.bid-buttons { display: flex; gap: 8px; }
+.chip {
+  flex: 1; padding: 15px 0; border-radius: 999px;
+  font-size: 15px; font-weight: 800;
+  transition: opacity 0.2s, transform 0.12s;
+}
+.chip:disabled { opacity: 0.32; }
+.chip:active:not(:disabled) { transform: scale(0.95); }
+.chip.max {
+  background: linear-gradient(160deg, var(--gold1), var(--gold2));
+  color: #201703; border: 1px solid rgba(255, 255, 255, 0.35);
+}
+.pass {
+  background: transparent; color: var(--danger); border: 1px solid var(--danger);
+  border-radius: 12px; padding: 13px 0; font-size: 14px; font-weight: 700;
+}
+.pass:disabled { opacity: 0.32; }
 
 /* ----- Bandeau joueurs ----- */
-.players-strip { display: grid; gap: 0.5rem; margin-top: 0.5rem; }
-.player-chip {
-  display: flex; gap: 0.7rem; align-items: baseline;
-  background: var(--bg2); border-radius: 10px; padding: 0.55rem 0.9rem;
-  border: 1px solid transparent; font-size: 0.9rem;
+.players-strip { display: grid; gap: 7px; }
+.player-row {
+  position: relative; display: flex; align-items: center; gap: 10px;
+  border-radius: 12px; padding: 9px 11px;
+  background: var(--surface); border: 1px solid var(--border);
+  transition: border-color 0.25s, box-shadow 0.25s, opacity 0.25s;
 }
-.player-chip.leading { border-color: var(--accent); }
-.player-chip.passed { opacity: 0.55; }
-.chip-name { font-weight: 700; }
-.chip-bank { color: var(--muted); }
-.chip-deck { letter-spacing: 0.15em; color: var(--accent); }
-.chip-state { margin-left: auto; font-size: 0.75rem; color: var(--muted); }
+.players-strip.has-leader .player-row:not(.leading) { opacity: 0.72; }
+.player-row.leading {
+  border-color: var(--pc);
+  box-shadow: 0 0 0 1px var(--pc), 0 6px 22px color-mix(in srgb, var(--pc) 20%, transparent);
+}
+.pr-avatar {
+  flex: none; display: grid; place-items: center; width: 30px; height: 30px;
+  border-radius: 999px; background: var(--pc);
+  color: #0b1120; font-size: 13px; font-weight: 800;
+}
+.pr-col { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pr-name { font-size: 13px; font-weight: 800; color: var(--text); }
+.pr-bank {
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  font-variant-numeric: tabular-nums; animation: slam 0.3s ease-out both;
+}
+.pr-status {
+  margin-left: auto; font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--pc);
+}
+.pr-status.passed { color: var(--muted); }
+.pr-deck { display: flex; gap: 4px; margin-left: auto; }
+.pr-status + .pr-deck { margin-left: 0; }
+.pr-slot { width: 11px; height: 14px; border-radius: 3px; border: 1px solid #2c3654; }
+.pr-slot.filled { background: var(--pc); border-color: var(--pc); }
+.pr-slot.pop { animation: popIn 0.45s cubic-bezier(0.2, 1.5, 0.4, 1) both; }
+.pr-paid {
+  position: absolute; right: 12px; top: -8px;
+  font-size: 12px; font-weight: 800; color: var(--danger);
+  animation: floatUp 0.9s ease-out both;
+}
 
 /* ----- Résultats ----- */
 .podium-title { font-size: 1.5rem; }
@@ -180,3 +231,180 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 .friend-row .player-link { flex: 1; }
 .friend-actions { display: flex; gap: 0.4rem; }
 .friend-actions button { padding: 0.5rem 0.8rem; font-size: 0.85rem; }
+
+/* ----- V1.3 : animations de l'écran d'enchère ----- */
+/* Toutes ces keyframes n'animent que opacity, transform ou filter : aucune ne
+   déclenche de reflow. Le retournement de carte du handoff a été retiré, donc
+   pas de keyframe `sheen` ni de contexte 3D. */
+@keyframes cardDeal {
+  0%   { opacity: 0; transform: translateX(60px) rotate(6deg); }
+  100% { opacity: 1; transform: translateX(0) rotate(0); }
+}
+@keyframes flashIn { 0% { opacity: 0 } 12% { opacity: .85 } 100% { opacity: 0 } }
+@keyframes stampIn {
+  0%   { opacity: 0; transform: scale(1.9) rotate(-14deg); }
+  55%  { opacity: 1; transform: scale(.94) rotate(-8deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-8deg); }
+}
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0); }
+  60%  { transform: scale(1.45); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes floatUp {
+  0%   { opacity: 0; transform: translateY(6px) scale(.8); }
+  25%  { opacity: 1; transform: translateY(-2px) scale(1.05); }
+  100% { opacity: 0; transform: translateY(-30px) scale(1); }
+}
+@keyframes slam {
+  0%   { transform: scale(1.5); filter: brightness(2); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+@keyframes urgent { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+/* ----- V1.3 : carte, variante full ----- */
+.fut-card:not(.mini) {
+  padding: 16px;
+  overflow: hidden;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+/* voile de brillance */
+.fut-card:not(.mini)::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 80% 45% at 50% 0%, rgba(255, 255, 255, 0.45), transparent 60%);
+}
+/* filet au-dessus du nom */
+.fut-card:not(.mini)::after {
+  content: ''; position: absolute; left: 16px; right: 16px; bottom: 44px;
+  border-top: 1px solid rgba(32, 23, 3, 0.28);
+}
+.fut-card:not(.mini) .fut-rating { top: 11px; left: 14px; font-size: 38px; }
+.fut-card:not(.mini) .fut-position { top: 56px; left: 15px; font-size: 15px; opacity: 0.7; }
+.fut-card:not(.mini) .fut-name { position: relative; font-size: 19px; font-weight: 800; }
+.fut-tier {
+  position: absolute; top: 12px; right: 14px;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; opacity: 0.55;
+}
+
+/* ----- V1.3 : barre d'état de l'enchère ----- */
+.auction-header { display: flex; align-items: center; gap: 8px; height: 34px; }
+.ah-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--muted);
+}
+.ah-pips { display: flex; gap: 4px; }
+.pip { width: 20px; height: 4px; border-radius: 2px; background: #2c3654; }
+.pip.won { background: var(--accent); }
+.pip.current { background: var(--text); }
+.ah-count {
+  font-size: 12px; font-weight: 700; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.ah-bank {
+  margin-left: auto; display: flex; align-items: baseline; gap: 6px;
+  background: rgba(232, 195, 74, 0.09); border: 1px solid rgba(232, 195, 74, 0.28);
+  border-radius: 999px; padding: 5px 11px;
+}
+.ah-bank-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted);
+}
+.ah-bank strong {
+  font-size: 14px; font-weight: 800; color: var(--accent);
+  font-variant-numeric: tabular-nums; animation: slam 0.3s ease-out both;
+}
+
+/* ----- V1.3 : bandeau meneur ----- */
+.leader-banner {
+  position: relative; display: flex; align-items: center; gap: 11px;
+  border-radius: 14px; padding: 10px 12px;
+  background: color-mix(in srgb, var(--pc) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pc) 40%, transparent);
+  transition: background 0.25s, border-color 0.25s;
+}
+.leader-banner.neutral { background: var(--surface); border-color: var(--border); }
+.lb-avatar {
+  flex: none; display: grid; place-items: center; width: 36px; height: 36px;
+  border-radius: 999px; background: var(--pc);
+  color: #0b1120; font-size: 15px; font-weight: 800;
+}
+.lb-col { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lb-overline {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted);
+}
+.lb-name {
+  font-size: 15px; font-weight: 800; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.lb-bid { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.lb-bid strong {
+  font-size: 26px; font-weight: 900; line-height: 1; color: var(--pc);
+  font-variant-numeric: tabular-nums; transform-origin: right center;
+  animation: slam 0.3s ease-out both;
+}
+.lb-raise {
+  position: absolute; right: 14px; top: -6px;
+  font-size: 13px; font-weight: 800; color: var(--pc);
+  animation: floatUp 0.9s ease-out both;
+}
+
+/* ----- V1.3 : scène carte ----- */
+.card-scene {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+}
+.card-box { position: relative; width: 246px; height: 316px; display: grid; place-items: center; }
+.card-holder { position: relative; width: 210px; }
+.card-holder.reveal { animation: cardDeal 0.38s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.card-holder.fly { transition: transform 0.72s cubic-bezier(0.55, -0.15, 0.4, 1); }
+.card-holder.fly.fade { opacity: 0; transition: opacity 0.4s ease-out; }
+.card-holder.landed { opacity: 0; }
+.card-flash {
+  position: absolute; inset: -40px; pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, #fff, transparent 62%);
+  animation: flashIn 0.5s ease-out both;
+}
+.card-stamp {
+  position: absolute; inset: 0; width: fit-content; height: fit-content; margin: auto;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  border: 4px solid var(--pc); border-radius: 10px;
+  background: rgba(11, 17, 32, 0.72); padding: 10px 20px;
+  animation: stampIn 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.card-stamp strong {
+  font-size: 24px; font-weight: 900; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--pc);
+}
+.card-stamp small { font-size: 13px; color: var(--text); white-space: nowrap; }
+.card-count { display: flex; align-items: baseline; gap: 8px; margin: 0; }
+.card-count strong {
+  font-size: 22px; font-weight: 800; color: var(--pc);
+  font-variant-numeric: tabular-nums;
+}
+.card-count strong.urgent { color: var(--danger); }
+.card-count span {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+/* ----- V1.3 : page d'enchère ----- */
+.page.auction { position: relative; gap: 12px; min-height: calc(100vh - 2rem); }
+/* halo doré derrière la scène carte */
+.page.auction::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse 70% 34% at 50% 44%, rgba(232, 195, 74, 0.07), transparent 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* On garde l'information (la carte change, elle est adjugée) sans le mouvement */
+  .card-holder.reveal { animation: fadeIn 0.2s ease-out both; }
+  .card-holder.fly { transform: none !important; opacity: 0; transition: opacity 0.3s ease-out; }
+  .card-stamp { animation: fadeIn 0.2s ease-out both; }
+  .timer-ring.urgent .ring-fg { animation: none; }
+  .lb-raise, .pr-paid, .pr-slot.pop, .ah-bank strong, .lb-bid strong, .pr-bank {
+    animation: none;
+  }
+}

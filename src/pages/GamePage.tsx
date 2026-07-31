@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { t } from '../i18n'
 import { useGame } from '../hooks/useGame'
@@ -12,6 +12,9 @@ export default function GamePage() {
   const { gameId } = useParams<'gameId'>()
   const state = useGame(gameId!)
   const botStop = useRef<(() => void) | null>(null)
+  // La partie passe à `finished` dans la même transaction que la dernière
+  // adjudication : on garde l'écran d'enchère le temps de son animation.
+  const [sequenceEnCours, setSequenceEnCours] = useState(false)
 
   useEffect(() => () => { botStop.current?.() }, [])
 
@@ -23,6 +26,8 @@ export default function GamePage() {
   // partie invisible (visiteur bloqué par la RLS) ou purgée : on tente le résumé persistant
   if (!state.game) return <MatchSummary gameId={gameId!} />
   if (state.game.status === 'lobby') return <Lobby state={state} onAddBot={addBot} />
-  if (state.game.status === 'playing') return <Auction state={state} />
+  if (state.game.status === 'playing' || sequenceEnCours) {
+    return <Auction state={state} onSequenceChange={setSequenceEnCours} />
+  }
   return <Results state={state} />
 }

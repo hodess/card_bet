@@ -1,20 +1,18 @@
-import { formatMs } from '../lib/game'
-
-export default function TimerRing({ remaining, windowMs }:
-  { remaining: number; windowMs: number }) {
+// Anneau de compte à rebours : contour rectangulaire de la carte (246×316).
+// Aucune rotation sur les rect — elle déformerait la géométrie du tracé.
+export default function TimerRing({ remaining, windowMs, urgent }:
+  { remaining: number; windowMs: number; urgent: boolean }) {
   const fraction = Math.max(0, Math.min(1, remaining / windowMs))
   return (
-    <div className="timer-ring" role="timer">
-      <svg viewBox="0 0 80 80">
-        <circle className="ring-bg" cx="40" cy="40" r="34" />
-        <circle
-          className="ring-fg"
-          cx="40" cy="40" r="34"
-          strokeDasharray={2 * Math.PI * 34}
-          strokeDashoffset={2 * Math.PI * 34 * (1 - fraction)}
-        />
-      </svg>
-      <span className="ring-label">{formatMs(remaining)}</span>
-    </div>
+    <svg className={`timer-ring${urgent ? ' urgent' : ''}`} viewBox="0 0 246 316" role="timer">
+      <rect className="ring-bg" x="9" y="9" width="228" height="298" rx="22" />
+      <rect
+        className="ring-fg"
+        x="9" y="9" width="228" height="298" rx="22"
+        pathLength={1000}
+        strokeDasharray={1000}
+        strokeDashoffset={1000 * (1 - fraction)}
+      />
+    </svg>
   )
 }
