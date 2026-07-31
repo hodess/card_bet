@@ -1,32 +1,53 @@
-import { cardsOf } from '../lib/game'
+import type { CSSProperties } from 'react'
+import type { StripRow } from '../lib/players'
+import { playerColor } from '../lib/players'
+import { avatarInitial } from '../lib/avatar'
 import { useT } from '../hooks/useT'
 
-type StripPlayer = { id: string; nickname: string; bankroll: number }
-
-export default function PlayersStrip({ players, ownedCards, deckSize, currentBidderId, passedIds }: {
-  players: StripPlayer[]
-  ownedCards: { player_id: string }[]
-  deckSize: number
-  currentBidderId: string
-  passedIds: string[]
+// Bandeau joueurs : bankroll, slots de deck, statut. Le bloc de slots porte la
+// ref exposée au parent : c'est la cible du vol de la carte adjugée.
+export default function PlayersStrip({ rows, onDeckRef }: {
+  rows: StripRow[]
+  onDeckRef: (playerId: string, el: HTMLDivElement | null) => void
 }) {
   const { t } = useT()
+  const statuts = {
+    leading: t('auction.chipLeading'),
+    wins: t('auction.chipWins'),
+    passed: t('auction.chipPassed'),
+  }
+  const unMeneur = rows.some(r => r.status === 'leading' || r.status === 'wins')
+
   return (
-    <footer className="players-strip">
-      {players.map(p => {
-        const count = cardsOf(ownedCards, p.id).length
-        const passed = passedIds.includes(p.id)
-        const leading = p.id === currentBidderId
-        return (
-          <div key={p.id} className={`player-chip${leading ? ' leading' : ''}${passed ? ' passed' : ''}`}>
-            <span className="chip-name">{p.nickname}</span>
-            <span className="chip-bank">{p.bankroll} €</span>
-            <span className="chip-deck">{'●'.repeat(count)}{'○'.repeat(Math.max(0, deckSize - count))}</span>
-            {passed && <span className="chip-state">{t('auction.chipPassed')}</span>}
-            {leading && <span className="chip-state">{t('auction.chipLeading')}</span>}
+    <footer className={`players-strip${unMeneur ? ' has-leader' : ''}`}>
+      {rows.map(row => (
+        <div
+          key={row.id}
+          className={`player-row${row.status === 'leading' || row.status === 'wins' ? ' leading' : ''}`}
+          style={{ '--pc': playerColor(row.seat) } as CSSProperties}
+        >
+          <span className="pr-avatar">{avatarInitial(row.nickname)}</span>
+          <span className="pr-col">
+            <span className="pr-name">{row.nickname}</span>
+            {/* key = valeur : rejoue `slam` quand la bankroll change */}
+            <span className="pr-bank" key={row.bankroll}>{row.bankroll} €</span>
+          </span>
+          {row.status && (
+            <span className={`pr-status${row.status === 'passed' ? ' passed' : ''}`}>
+              {statuts[row.status]}
+            </span>
+          )}
+          <div className="pr-deck" ref={el => { onDeckRef(row.id, el) }}>
+            {Array.from({ length: row.total }, (_, i) => (
+              <i
+                key={i}
+                className={`pr-slot${i < row.filled ? ' filled' : ''}${i === row.popIndex ? ' pop' : ''}`}
+              />
+            ))}
           </div>
-        )
-      })}
+          {row.paid !== null && <span className="pr-paid">−{row.paid} €</span>}
+        </div>
+      ))}
     </footer>
   )
 }

@@ -21,6 +21,15 @@
     "historyPageSize": 20,
     "historyCap": 200,
     "searchDebounceMs": 250,
-    "boardPollMs": 3000
+    "boardPollMs": 3000,
+    "auction": {
+      "revealMs": 380,
+      "soldMs": 950,
+      "flyMs": 720,
+      "landedMs": 950,
+      "floatMs": 900,
+      "urgentMs": 1200,
+      "maxPips": 8
+    }
   }
 }
