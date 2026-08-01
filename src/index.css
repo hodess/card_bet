@@ -80,7 +80,7 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 .bid-zone { display: flex; flex-direction: column; gap: 8px; }
 .bid-help {
   display: flex; align-items: baseline; justify-content: space-between;
-  gap: 8px; margin: 0;
+  flex-wrap: wrap; gap: 8px; margin: 0;
 }
 .bid-help span {
   font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
@@ -89,6 +89,7 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 .bid-help strong {
   letter-spacing: 0; font-weight: 800; color: var(--accent);
   font-variant-numeric: tabular-nums;
+  animation: slam 0.3s ease-out both;
 }
 .bid-buttons { display: flex; gap: 8px; }
 .chip {
@@ -108,43 +109,106 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 }
 .pass:disabled { opacity: 0.32; }
 
-/* ----- Bandeau joueurs ----- */
-.players-strip { display: grid; gap: 7px; }
-.player-row {
-  position: relative; display: flex; align-items: center; gap: 10px;
-  border-radius: 12px; padding: 9px 11px;
-  background: var(--surface); border: 1px solid var(--border);
-  transition: border-color 0.25s, box-shadow 0.25s, opacity 0.25s;
+/* ----- Table ronde : les sièges autour de la carte ----- */
+/* --card-w, --card-ratio et --lane-top sont injectés par Auction.tsx depuis config.json.
+   L'arbitrage retenu : la carte garde sa taille nominale, ce sont les sièges qui
+   se serrent (leur largeur suit le couloir laissé libre) ; la plaque ne cède
+   qu'en dernier recours, sur un écran trop étroit pour offrir ce couloir. Les
+   deux longueurs se calculent en `cqi` et non en `%` : un pourcentage se résout
+   dans la boîte de l'élément qui le lit, pas dans celle où la variable est
+   déclarée — écrire 100% ici puis lire la largeur du siège dans `.seat`
+   donnerait donc un couloir faux. `cqi` se résout toujours sur la largeur du
+   conteneur de requête (`container-type: inline-size` ci-dessous), où qu'il
+   soit écrit. Quand la plaque cède, elle conserve le ratio
+   nominal de la carte (--card-ratio) : les fractions calculées par
+   src/lib/table.ts sur ce même rectangle restent donc exactes, et l'anneau de
+   chrono (viewBox 246×316, sans preserveAspectRatio explicite) continue de
+   longer les bords de la carte au lieu de se mettre en letterbox. */
+.auction-table {
+  container-type: inline-size;
+  /* --lane-min : plancher du couloir latéral, largeur minimale d'un siège.
+     --plate-w : la carte à sa taille nominale, sauf si le conteneur ne peut
+     pas lui laisser ce plancher de chaque côté — alors la plaque cède. */
+  --lane-min: 34px;
+  --plate-w: min(var(--card-w), calc(100cqi - 2 * var(--lane-min)));
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding-top: var(--lane-top);
 }
-.players-strip.has-leader .player-row:not(.leading) { opacity: 0.72; }
-.player-row.leading {
-  border-color: var(--pc);
-  box-shadow: 0 0 0 1px var(--pc), 0 6px 22px color-mix(in srgb, var(--pc) 20%, transparent);
+/* La plaque EST la carte : les sièges se positionnent en pourcentages de son
+   rectangle et débordent volontairement dans les couloirs. La hauteur dérive
+   de la largeur via aspect-ratio (un calc() multipliant deux longueurs serait
+   invalide en CSS) : la plaque garde toujours le ratio 246/316, même repliée. */
+.table-plate { position: relative; width: var(--plate-w); aspect-ratio: var(--card-ratio); }
+
+.seat {
+  --seat-scale: 0.92;
+  position: absolute; z-index: 1;
+  left: calc(var(--sx) * 100%); top: calc(var(--sy) * 100%);
+  /* La largeur d'un siège latéral vaut le couloir réellement laissé libre par
+     la carte : (100cqi - plaque) / 2. En dessous de --lane-min, c'est la
+     plaque qui a déjà cédé (voir .auction-table) pour ne jamais descendre
+     sous ce plancher. À l'échelle de base (--seat-scale: 0.92) le couloir
+     suffit donc toujours ; le siège meneur, agrandi à 1.22, empiète alors
+     d'une dizaine de pixels sur la marge de page de #root — sans clipping,
+     aucun ancêtre n'étant en overflow: hidden. */
+  width: max(var(--lane-min), calc((100cqi - var(--plate-w)) / 2));
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  transition: transform 0.25s, filter 0.25s, opacity 0.25s;
 }
-.pr-avatar {
-  flex: none; display: grid; place-items: center; width: 30px; height: 30px;
+/* Ancrage vers l'extérieur : le contenu d'un siège reste toujours hors du
+   rectangle de la carte. L'origine de transformation suit le bord, pour que le
+   grossissement du meneur pousse vers l'extérieur et non dans la carte. */
+.seat-left {
+  transform: translate(-100%, -50%) scale(var(--seat-scale));
+  transform-origin: right center;
+}
+.seat-top {
+  /* Un siège du bord haut ne consomme pas le couloir latéral : il a toute la
+     largeur de la plaque devant lui. Sa largeur est donc fixe, calée sur le
+     plus serré des cas — quatre sièges en haut à huit joueurs. */
+  width: 64px;
+  transform: translate(-50%, -100%) scale(var(--seat-scale));
+  transform-origin: center bottom;
+}
+.seat-right {
+  transform: translate(0, -50%) scale(var(--seat-scale));
+  transform-origin: left center;
+}
+.seat.leading { --seat-scale: 1.22; }
+.seat.passed { filter: grayscale(1); opacity: 0.45; }
+.seat.me .seat-avatar { box-shadow: 0 0 0 2px var(--bg2), 0 0 0 3px var(--text); }
+
+.seat-avatar {
+  display: grid; place-items: center; width: 30px; height: 30px;
   border-radius: 999px; background: var(--pc);
   color: #0b1120; font-size: 13px; font-weight: 800;
 }
-.pr-col { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.pr-name { font-size: 13px; font-weight: 800; color: var(--text); }
-.pr-bank {
-  font-size: 11px; font-weight: 700; color: var(--muted);
+.seat.leading .seat-avatar {
+  box-shadow: 0 0 0 2px var(--bg2), 0 0 0 3px var(--pc),
+    0 6px 22px color-mix(in srgb, var(--pc) 35%, transparent);
+}
+/* Plus spécifique que .seat.me et .seat.leading, qui sont à égalité entre elles :
+   sans ce cumul, la seconde déclarée l'emporte et le siège du joueur local perd
+   son liseré d'identité quand il mène (cas fréquent à deux joueurs). */
+.seat.me.leading .seat-avatar {
+  box-shadow: 0 0 0 2px var(--bg2), 0 0 0 3px var(--pc), 0 0 0 4px var(--text),
+    0 6px 22px color-mix(in srgb, var(--pc) 35%, transparent);
+}
+.seat-name {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 10px; font-weight: 800; color: var(--text);
+}
+.seat-bank {
+  font-size: 10px; font-weight: 700; color: var(--muted);
   font-variant-numeric: tabular-nums; animation: slam 0.3s ease-out both;
 }
-.pr-status {
-  margin-left: auto; font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--pc);
-}
-.pr-status.passed { color: var(--muted); }
-.pr-deck { display: flex; gap: 4px; margin-left: auto; }
-.pr-status + .pr-deck { margin-left: 0; }
-.pr-slot { width: 11px; height: 14px; border-radius: 3px; border: 1px solid #2c3654; }
-.pr-slot.filled { background: var(--pc); border-color: var(--pc); }
-.pr-slot.pop { animation: popIn 0.45s cubic-bezier(0.2, 1.5, 0.4, 1) both; }
-.pr-paid {
-  position: absolute; right: 12px; top: -8px;
-  font-size: 12px; font-weight: 800; color: var(--danger);
+.seat-deck { display: flex; gap: 3px; }
+.seat-slot { width: 8px; height: 11px; border-radius: 2px; border: 1px solid #2c3654; }
+.seat-slot.filled { background: var(--pc); border-color: var(--pc); }
+.seat-slot.pop { animation: popIn 0.45s cubic-bezier(0.2, 1.5, 0.4, 1) both; }
+.seat-paid {
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  font-size: 11px; font-weight: 800; color: var(--danger); white-space: nowrap;
   animation: floatUp 0.9s ease-out both;
 }
 
@@ -302,20 +366,6 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
   font-size: 12px; font-weight: 700; color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
-.ah-bank {
-  margin-left: auto; display: flex; align-items: baseline; gap: 6px;
-  background: rgba(232, 195, 74, 0.09); border: 1px solid rgba(232, 195, 74, 0.28);
-  border-radius: 999px; padding: 5px 11px;
-}
-.ah-bank-label {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--muted);
-}
-.ah-bank strong {
-  font-size: 14px; font-weight: 800; color: var(--accent);
-  font-variant-numeric: tabular-nums; animation: slam 0.3s ease-out both;
-}
-
 /* ----- V1.3 : bandeau meneur ----- */
 .leader-banner {
   position: relative; display: flex; align-items: center; gap: 11px;
@@ -352,12 +402,10 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 }
 
 /* ----- V1.3 : scène carte ----- */
-.card-scene {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 10px;
-}
-.card-box { position: relative; width: 246px; height: 316px; display: grid; place-items: center; }
-.card-holder { position: relative; width: 210px; }
+/* La boîte carte remplit la plaque de la table ; le z-index garde la carte
+   au-dessus des sièges pendant son vol vers le gagnant. */
+.card-box { position: absolute; inset: 0; display: grid; place-items: center; }
+.card-holder { position: relative; z-index: 2; width: min(210px, 86%); }
 .card-holder.reveal { animation: cardDeal 0.38s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .card-holder.fly { transition: transform 0.72s cubic-bezier(0.55, -0.15, 0.4, 1); }
 .card-holder.fly.fade { opacity: 0; transition: opacity 0.4s ease-out; }
@@ -392,7 +440,7 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 
 /* ----- V1.3 : page d'enchère ----- */
 .page.auction { position: relative; gap: 12px; min-height: calc(100vh - 2rem); }
-/* halo doré derrière la scène carte */
+/* halo doré derrière la table */
 .page.auction::before {
   content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: radial-gradient(ellipse 70% 34% at 50% 44%, rgba(232, 195, 74, 0.07), transparent 70%);
@@ -404,7 +452,9 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
   .card-holder.fly { transform: none !important; opacity: 0; transition: opacity 0.3s ease-out; }
   .card-stamp { animation: fadeIn 0.2s ease-out both; }
   .timer-ring.urgent .ring-fg { animation: none; }
-  .lb-raise, .pr-paid, .pr-slot.pop, .ah-bank strong, .lb-bid strong, .pr-bank {
+  .lb-raise, .seat-paid, .seat-slot.pop, .lb-bid strong, .seat-bank, .bid-help strong {
     animation: none;
   }
+  /* On garde l'information « qui mène » (l'échelle) sans la transition */
+  .seat { transition: none; }
 }

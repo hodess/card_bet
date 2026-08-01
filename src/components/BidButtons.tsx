@@ -3,10 +3,11 @@ import { useT } from '../hooks/useT'
 
 // Toute la zone d'action de l'enchère : ligne d'aide, incréments, Max, Je passe.
 export default function BidButtons({
-  currentBid, myMax, canAct, hasPassed, iLead, closed, deckFull, onBid, onPass,
+  currentBid, myMax, bankroll, canAct, hasPassed, iLead, closed, deckFull, onBid, onPass,
 }: {
   currentBid: number
   myMax: number
+  bankroll: number
   canAct: boolean
   hasPassed: boolean
   iLead: boolean
@@ -27,7 +28,12 @@ export default function BidButtons({
     <div className="bid-zone">
       <p className="bid-help">
         <span>{aide}</span>
-        <span>{t('auction.maxPossible')} <strong>{myMax} €</strong></span>
+        <span>
+          {t('auction.bankLabel')}{' '}
+          {/* key = valeur : rejoue `slam` quand la bankroll change */}
+          <strong key={bankroll}>{bankroll} €</strong>
+          {' · '}{t('auction.maxInline', { n: myMax })}
+        </span>
       </p>
       <div className="bid-buttons">
         {config.game.ui.increments.map(inc => {

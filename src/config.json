@@ -3,7 +3,7 @@
     "deckSize": 3,
     "startBankroll": 1000,
     "minBid": 10,
-    "closeDelaySeconds": 3,
+    "closeDelaySeconds": 8,
     "maxAuctionSeconds": 60,
     "ui": {
       "increments": [10, 50, 100]
@@ -29,7 +29,8 @@
       "landedMs": 950,
       "floatMs": 900,
       "urgentMs": 1200,
-      "maxPips": 8
+      "maxPips": 8,
+      "table": { "cardW": 246, "cardH": 316, "laneTop": 66, "startFraction": 0.45 }
     }
   }
 }

@@ -1,9 +1,9 @@
 import { pipStates, showPips } from '../lib/auctionPhase'
 import { useT } from '../hooks/useT'
 
-// Barre d'état de l'enchère : avancement dans la partie + bankroll du joueur.
-export default function AuctionHeader({ seq, total, bankroll }:
-  { seq: number; total: number; bankroll: number }) {
+// Barre d'état de l'enchère : avancement dans la partie. La bankroll vit
+// maintenant dans le siège du joueur et dans la ligne d'aide des enchères.
+export default function AuctionHeader({ seq, total }: { seq: number; total: number }) {
   const { t } = useT()
   return (
     <header className="auction-header">
@@ -14,11 +14,6 @@ export default function AuctionHeader({ seq, total, bankroll }:
         </span>
       )}
       <span className="ah-count">{seq}/{total}</span>
-      <span className="ah-bank">
-        <span className="ah-bank-label">{t('auction.bankLabel')}</span>
-        {/* key = valeur : un changement de bankroll remonte le nœud et rejoue `slam` */}
-        <strong key={bankroll}>{bankroll} €</strong>
-      </span>
     </header>
   )
 }

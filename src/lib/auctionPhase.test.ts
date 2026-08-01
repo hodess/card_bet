@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import config from '../config.json'
 import {
-  canFly, flyTransform, isUrgent, nextPhase, phaseDuration, pipStates, SEQUENCE_MS,
+  canFly, flyTransform, isSettled, isUrgent, nextPhase, phaseDuration, pipStates, SEQUENCE_MS,
   showPips, venteDe,
 } from './auctionPhase'
 
@@ -62,6 +62,18 @@ describe('isUrgent', () => {
   it('faux à zéro ou en négatif : l\'enchère est finie, pas urgente', () => {
     expect(isUrgent(0)).toBe(false)
     expect(isUrgent(-200)).toBe(false)
+  })
+})
+
+describe('isSettled', () => {
+  it('vrai pendant les trois phases d\'adjudication', () => {
+    expect(isSettled('sold')).toBe(true)
+    expect(isSettled('fly')).toBe(true)
+    expect(isSettled('landed')).toBe(true)
+  })
+  it('faux avant l\'adjudication', () => {
+    expect(isSettled('reveal')).toBe(false)
+    expect(isSettled('bid')).toBe(false)
   })
 })
 
