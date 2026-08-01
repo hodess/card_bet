@@ -6,6 +6,7 @@
     "closeDelaySeconds": 8,
     "maxAuctionSeconds": 60,
     "maxPlayers": 2,
+    "pack": "football",
     "limits": {
       "deckSize": { "min": 1, "max": 10, "step": 1 },
       "startBankroll": { "min": 100, "max": 100000, "step": 100 },

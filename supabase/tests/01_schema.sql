@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(8);
+select plan(10);
 
 select has_table('public', 'cards', 'table cards');
 select has_table('public', 'games', 'table games');
@@ -8,6 +8,8 @@ select has_table('public', 'players', 'table players');
 select has_table('public', 'game_cards', 'table game_cards');
 select has_table('public', 'auctions', 'table auctions');
 select has_table('public', 'player_cards', 'table player_cards');
+select has_table('public', 'packs', 'table packs');
+select fk_ok('public', 'cards', 'pack', 'public', 'packs', 'slug');
 
 -- game_cards doit être illisible pour un client authentifié (secret du tirage)
 insert into games (id, code) values ('aaaaaaaa-0000-0000-0000-000000000000', 'TEST01');

@@ -14,6 +14,7 @@ export const en: Record<string, string> = {
   // --- navigation ---
   'nav.menu': 'Menu',
   'nav.home': 'Home',
+  'nav.packs': 'Card packs',
   'nav.myProfile': 'My profile',
   'nav.myFriends': 'My friends',
   'nav.signOut': 'Sign out',
@@ -34,6 +35,17 @@ export const en: Record<string, string> = {
   'home.noPublicGames': 'No open game right now.',
   'home.gameSummary': '{deck} cards · {bankroll} € · min bid {minBid} · {delay}s',
   'home.join': 'Join',
+
+  // --- packs ---
+  'packs.title': 'Card packs',
+  'packs.hint': 'Every game is played from one pack. Tap one to browse its cards.',
+  'packs.summary': '{count} cards · ratings {min}–{max}',
+  'packs.cardCount': '{count} cards',
+  'packs.notFound': 'Pack not found',
+  'packs.football.name': 'Football',
+  'packs.football.description': 'The stars of the beautiful game.',
+  'packs.naruto.name': 'Naruto',
+  'packs.naruto.description': 'Ninja from Konoha and beyond.',
 
   // --- recherche de joueurs ---
   'search.title': 'Find a player',
@@ -88,6 +100,7 @@ export const en: Record<string, string> = {
   'settings.minBid': 'Minimum bid',
   'settings.closeDelaySeconds': 'Closing delay (s)',
   'settings.maxPlayers': 'Max players',
+  'settings.pack': 'Card pack',
 
   // --- enchère ---
   'auction.preparing': 'Preparing the auction…',
@@ -193,6 +206,7 @@ export const en: Record<string, string> = {
   'errors.MAX_PLAYERS_TOO_LOW': 'There are already more players than that limit.',
   'errors.CANNOT_KICK_SELF': 'You can’t kick yourself.',
   'errors.NOT_ENOUGH_PLAYERS': 'At least 2 players are needed.',
+  'errors.UNKNOWN_PACK': 'That card pack does not exist.',
   'errors.PLAYER_NOT_FOUND': 'Player not found.',
   'errors.SELF_FRIENDSHIP': 'You cannot add yourself.',
   'errors.ALREADY_FRIENDS': 'You are already friends.',

@@ -15,6 +15,7 @@ export const fr: Record<string, string> = {
   // --- navigation ---
   'nav.menu': 'Menu',
   'nav.home': 'Accueil',
+  'nav.packs': 'Les packs',
   'nav.myProfile': 'Mon profil',
   'nav.myFriends': 'Mes amis',
   'nav.signOut': 'Se déconnecter',
@@ -35,6 +36,17 @@ export const fr: Record<string, string> = {
   'home.noPublicGames': 'Aucune partie ouverte pour l’instant.',
   'home.gameSummary': '{deck} cartes · {bankroll} € · mise min {minBid} · {delay} s',
   'home.join': 'Rejoindre',
+
+  // --- packs ---
+  'packs.title': 'Les packs',
+  'packs.hint': 'Chaque partie se joue dans un pack. Clique pour voir les cartes.',
+  'packs.summary': '{count} cartes · notes {min}–{max}',
+  'packs.cardCount': '{count} cartes',
+  'packs.notFound': 'Pack introuvable',
+  'packs.football.name': 'Football',
+  'packs.football.description': 'Les stars du ballon rond.',
+  'packs.naruto.name': 'Naruto',
+  'packs.naruto.description': 'Ninjas de Konoha et d’ailleurs.',
 
   // --- recherche de joueurs ---
   'search.title': 'Trouver un joueur',
@@ -89,6 +101,7 @@ export const fr: Record<string, string> = {
   'settings.minBid': 'Mise minimale',
   'settings.closeDelaySeconds': 'Délai d’adjudication (s)',
   'settings.maxPlayers': 'Joueurs maximum',
+  'settings.pack': 'Pack de cartes',
 
   // --- enchère ---
   'auction.preparing': 'Préparation de l’enchère…',
@@ -194,6 +207,7 @@ export const fr: Record<string, string> = {
   'errors.MAX_PLAYERS_TOO_LOW': 'Il y a déjà plus de joueurs que cette limite.',
   'errors.CANNOT_KICK_SELF': 'Tu ne peux pas t’exclure toi-même.',
   'errors.NOT_ENOUGH_PLAYERS': 'Il faut au moins 2 joueurs.',
+  'errors.UNKNOWN_PACK': 'Ce pack de cartes n’existe pas.',
   'errors.PLAYER_NOT_FOUND': 'Joueur introuvable.',
   'errors.SELF_FRIENDSHIP': 'Tu ne peux pas t’ajouter toi-même.',
   'errors.ALREADY_FRIENDS': 'Vous êtes déjà amis.',

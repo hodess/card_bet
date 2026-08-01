@@ -306,6 +306,12 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 .friend-actions { display: flex; gap: 0.4rem; }
 .friend-actions button { padding: 0.5rem 0.8rem; font-size: 0.85rem; }
 
+/* ----- V2 : liste des packs ----- */
+.pack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.8rem; }
+.pack-link { text-decoration: none; color: inherit; }
+.pack-tile { display: flex; flex-direction: column; gap: 0.3rem; background: var(--bg2); border-radius: 14px; padding: 1rem; }
+.pack-tile h2 { margin: 0; font-size: 1.05rem; }
+
 /* ----- V1.3 : animations de l'écran d'enchère ----- */
 /* Toutes ces keyframes n'animent que opacity, transform ou filter : aucune ne
    déclenche de reflow. Le retournement de carte du handoff a été retiré, donc

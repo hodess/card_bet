@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
+import { usePacks } from '../hooks/usePacks'
 import { useT } from '../hooks/useT'
 import config from '../config.json'
 import GameSettingsFields, { type GameSettings } from '../components/GameSettingsFields'
@@ -14,6 +15,7 @@ type PublicGame = {
   host_username: string | null
   player_count: number
   max_players: number
+  pack: string
   deck_size: number
   start_bankroll: number
   min_bid: number
@@ -27,12 +29,14 @@ const DEFAULTS: GameSettings = {
   minBid: config.game.minBid,
   closeDelaySeconds: config.game.closeDelaySeconds,
   maxPlayers: config.game.maxPlayers,
+  pack: config.game.pack,
 }
 
 export default function HomePage() {
   const nav = useNavigate()
   const { profile } = useProfile()
   const { t } = useT()
+  const { packs, error: packsError } = usePacks()
   const [nickname, setNickname] = useState('')
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -65,6 +69,7 @@ export default function HomePage() {
         minBid: s.minBid,
         closeDelaySeconds: s.closeDelaySeconds,
         maxPlayers: s.maxPlayers,
+        pack: s.pack,
         visibility,
       })
       nav(`/game/${gameId}`)
@@ -105,7 +110,10 @@ export default function HomePage() {
         <section className="public-setup">
           <h2>{t('home.publicSettingsTitle')}</h2>
           <p className="hint">{t('home.publicSettingsHint')}</p>
-          <GameSettingsFields value={settings} onChange={setSettings} />
+          <GameSettingsFields value={settings} onChange={setSettings}
+            packs={packs.map(p => p.slug)} />
+          {/* échec de list_packs : le sélecteur retombe en lecture seule sans ce message */}
+          {packsError && <p className="error">{packsError}</p>}
           <button onClick={() => createGame('public')} disabled={noNick}>{t('home.publish')}</button>
           <button className="secondary" onClick={() => setPublicSetup(false)}>{t('common.cancel')}</button>
         </section>
@@ -140,6 +148,7 @@ export default function HomePage() {
                   delay: g.close_delay_seconds,
                 })}
               </span>
+              <span className="hint">{t(`packs.${g.pack}.name`)}</span>
             </div>
             <button onClick={() => joinPublic(g.game_id)} disabled={noNick}>{t('home.join')}</button>
           </div>

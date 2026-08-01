@@ -11,6 +11,8 @@ import GamePage from './pages/GamePage'
 import AuthPage from './pages/AuthPage'
 import ProfilePage from './pages/ProfilePage'
 import MePage from './pages/MePage'
+import PacksPage from './pages/PacksPage'
+import PackPage from './pages/PackPage'
 
 // capture l'éventuelle erreur OAuth du retour Google et nettoie l'URL,
 // avant tout rendu et avant l'init de la session
@@ -51,6 +53,8 @@ export default function App() {
           <Route path="/account" element={<AuthPage />} />
           <Route path="/profile/:username" element={<ProfilePage />} />
           <Route path="/me" element={<MePage />} />
+          <Route path="/packs" element={<PacksPage />} />
+          <Route path="/packs/:slug" element={<PackPage />} />
         </Routes>
       </UsernameGate>
     </HashRouter>

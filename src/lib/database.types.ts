@@ -109,22 +109,33 @@ export type Database = {
         Row: {
           id: number
           name: string
+          pack: string
           position: string
           rating: number
         }
         Insert: {
           id?: never
           name: string
+          pack?: string
           position: string
           rating: number
         }
         Update: {
           id?: never
           name?: string
+          pack?: string
           position?: string
           rating?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cards_pack_fkey"
+            columns: ["pack"]
+            isOneToOne: false
+            referencedRelation: "packs"
+            referencedColumns: ["slug"]
+          },
+        ]
       }
       friendships: {
         Row: {
@@ -206,6 +217,7 @@ export type Database = {
           max_players: number
           min_bid: number
           next_game_id: string | null
+          pack: string
           start_bankroll: number
           status: string
           visibility: string
@@ -220,6 +232,7 @@ export type Database = {
           max_players?: number
           min_bid?: number
           next_game_id?: string | null
+          pack?: string
           start_bankroll?: number
           status?: string
           visibility?: string
@@ -234,6 +247,7 @@ export type Database = {
           max_players?: number
           min_bid?: number
           next_game_id?: string | null
+          pack?: string
           start_bankroll?: number
           status?: string
           visibility?: string
@@ -245,6 +259,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "games"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "games_pack_fkey"
+            columns: ["pack"]
+            isOneToOne: false
+            referencedRelation: "packs"
+            referencedColumns: ["slug"]
           },
         ]
       }
@@ -353,6 +374,21 @@ export type Database = {
           game_id?: string | null
           id?: string
           start_bankroll?: number
+        }
+        Relationships: []
+      }
+      packs: {
+        Row: {
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          slug: string
+          sort_order: number
+        }
+        Update: {
+          slug?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -474,6 +510,7 @@ export type Database = {
           p_max_auction_seconds?: number
           p_max_players?: number
           p_min_bid?: number
+          p_pack?: string
           p_start_bankroll?: number
           p_visibility?: string
         }
@@ -500,6 +537,7 @@ export type Database = {
         Args: { g_id: string; p_player_id: string }
         Returns: undefined
       }
+      list_packs: { Args: never; Returns: Json }
       list_public_games: { Args: never; Returns: Json }
       open_next_auction: {
         Args: { g_id: string; p_grace?: boolean }
@@ -520,6 +558,7 @@ export type Database = {
           p_max_auction_seconds?: number
           p_max_players?: number
           p_min_bid?: number
+          p_pack?: string
           p_start_bankroll?: number
         }
         Returns: undefined

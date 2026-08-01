@@ -38,6 +38,7 @@ export default function NavMenu() {
           <div className="nav-overlay" onClick={close} />
           <nav className="nav-drawer">
             <Link to="/" onClick={close}>{t('nav.home')}</Link>
+            <Link to="/packs" onClick={close}>{t('nav.packs')}</Link>
             {profile && (
               <>
                 <Link to={`/profile/${profile.username}`} onClick={close}>{t('nav.myProfile')}</Link>
