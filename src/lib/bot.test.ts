@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { decideBid, type BotView } from './bot'
+import { decideBid, pickBotName, type BotView } from './bot'
 
 const base: BotView = {
   botPlayerId: 'bot',
@@ -29,5 +29,28 @@ describe('decideBid', () => {
   it('respecte la règle de réserve : replie sur +10, sinon null', () => {
     expect(decideBid({ ...base, currentBid: 950 }, seq(0, 0.9))).toBe(960)
     expect(decideBid({ ...base, currentBid: 975 }, seq(0, 0.4))).toBeNull()
+  })
+})
+
+describe('pickBotName', () => {
+  it('prend le premier nom libre du config', () => {
+    expect(pickBotName([])).toBe('Bot Zizou')
+    expect(pickBotName(['Bot Zizou'])).toBe('Bot Bielsa')
+  })
+  it('ignore les pseudos humains inconnus', () => {
+    expect(pickBotName(['Romain', 'Alice'])).toBe('Bot Zizou')
+  })
+  it('suffixe une fois les quatre noms pris', () => {
+    const pris = ['Bot Zizou', 'Bot Bielsa', 'Bot Pep', 'Bot Arsène']
+    expect(pickBotName(pris)).toBe('Bot Zizou 2')
+    expect(pickBotName([...pris, 'Bot Zizou 2'])).toBe('Bot Bielsa 2')
+  })
+  it('donne sept noms distincts pour une table de huit', () => {
+    const noms: string[] = []
+    for (let i = 0; i < 7; i++) noms.push(pickBotName(['Romain', ...noms]))
+    expect(noms).toEqual([
+      'Bot Zizou', 'Bot Bielsa', 'Bot Pep', 'Bot Arsène',
+      'Bot Zizou 2', 'Bot Bielsa 2', 'Bot Pep 2',
+    ])
   })
 })

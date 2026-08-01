@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 
@@ -18,11 +18,16 @@ export type GameState = {
   auction: AuctionWithCard | null
   ownedCards: OwnedCard[]
   myPlayerId: string | null
+  // exclu par l'hôte : j'étais assis, ma ligne a disparu (et la RLS m'a fermé la partie)
+  kicked: boolean
+  refresh: () => void
 }
 
 export function useGame(gameId: string): GameState {
-  const [state, setState] = useState<GameState>({
-    loading: true, game: null, players: [], auction: null, ownedCards: [], myPlayerId: null,
+  const seated = useRef(false)
+  const [state, setState] = useState<Omit<GameState, 'refresh'>>({
+    loading: true, game: null, players: [], auction: null, ownedCards: [],
+    myPlayerId: null, kicked: false,
   })
 
   const loadAll = useCallback(async () => {
@@ -36,6 +41,7 @@ export function useGame(gameId: string): GameState {
     ])
     const players = playersRes.data ?? []
     const me = players.find(p => p.auth_uid === authRes.data.user?.id) ?? null
+    if (me) seated.current = true
     setState({
       loading: false,
       game: gameRes.data ?? null,
@@ -43,7 +49,15 @@ export function useGame(gameId: string): GameState {
       auction: (auctionsRes.data?.[0] as AuctionWithCard | undefined) ?? null,
       ownedCards: (ownedRes.data as OwnedCard[] | null) ?? [],
       myPlayerId: me?.id ?? null,
+      // exclu par l'hôte : sa ligne a disparu après être apparue — mais seulement si
+      // la lecture a réussi, sinon une requête en erreur (coupure, 401, rate limit)
+      // ferait croire à une exclusion et bloquerait le joueur à tort sur KickedNotice
+      kicked: seated.current && !me && !playersRes.error && !authRes.error,
     })
+  }, [gameId])
+
+  useEffect(() => {
+    seated.current = false
   }, [gameId])
 
   useEffect(() => {
@@ -58,5 +72,5 @@ export function useGame(gameId: string): GameState {
     return () => { supabase.removeChannel(channel) }
   }, [gameId, loadAll])
 
-  return state
+  return { ...state, refresh: loadAll }
 }

@@ -7,6 +7,7 @@ import { useUsernames } from '../hooks/useUsernames'
 import { joinGameById, rematchGame } from '../lib/gameApi'
 import { errorMessage } from '../lib/errors'
 import { useT } from '../hooks/useT'
+import { rankRows } from '../lib/ranking'
 
 export default function Results({ state }: { state: GameState }) {
   const nav = useNavigate()
@@ -15,14 +16,15 @@ export default function Results({ state }: { state: GameState }) {
   const usernames = useUsernames(players.map(p => p.auth_uid))
   const myNickname = players.find(p => p.id === myPlayerId)?.nickname ?? t('common.player')
   const [error, setError] = useState<string | null>(null)
-  const rows = players.map(p => {
-    const cards = ownedCards.filter(c => c.player_id === p.id)
-    return { player: p, cards, total: cards.reduce((s, c) => s + c.card.rating, 0) }
-  }).sort((a, b) => b.total - a.total || b.player.bankroll - a.player.bankroll)
-
-  const tie = rows.length === 2
-    && rows[0].total === rows[1].total
-    && rows[0].player.bankroll === rows[1].player.bankroll
+  const classement = rankRows(
+    players.map(p => {
+      const cards = ownedCards.filter(c => c.player_id === p.id)
+      return { player: p, cards, total: cards.reduce((s, c) => s + c.card.rating, 0) }
+    }),
+    r => ({ total: r.total, money: r.player.bankroll }),
+  )
+  // plusieurs premiers : égalité, et tous sont gagnants
+  const tie = classement.filter(c => c.rank === 1).length > 1
 
   async function propose() {
     try {
@@ -43,10 +45,10 @@ export default function Results({ state }: { state: GameState }) {
   return (
     <main className="page">
       <h1 className="podium-title">
-        {tie ? t('results.tie') : t('results.winner', { name: rows[0].player.nickname })}
+        {tie || !classement[0] ? t('results.tie') : t('results.winner', { name: classement[0].row.player.nickname })}
       </h1>
-      {rows.map(({ player, cards, total }, i) => (
-        <section key={player.id} className={`result-row${i === 0 && !tie ? ' winner' : ''}`}>
+      {classement.map(({ row: { player, cards, total }, rank }) => (
+        <section key={player.id} className={`result-row${rank === 1 ? ' winner' : ''}`}>
           <h2>
             <PlayerName nickname={player.nickname} username={usernames[player.auth_uid]} />
             {' '}{t('common.scoreLine', { score: total })}{' '}

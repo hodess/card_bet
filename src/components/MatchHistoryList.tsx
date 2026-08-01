@@ -5,14 +5,18 @@ import config from '../config.json'
 import Card, { type CardData } from './Card'
 import { useT } from '../hooks/useT'
 import { locale } from '../i18n'
+import { rankRows } from '../lib/ranking'
 
+type Adversaire = { nickname: string; username: string | null; score: number; isBot: boolean }
 type HistoryRow = {
   matchId: string
   finishedAt: string
   result: 'win' | 'loss' | 'draw'
   score: number
   moneyLeft: number
-  opponent: { nickname: string; username: string | null; score: number; isBot: boolean } | null
+  rank: number | null
+  players: number
+  opponents: Adversaire[]
 }
 type DeckCard = { seat: number; price_paid: number; card: CardData & { id: number } }
 
@@ -29,25 +33,41 @@ export default function MatchHistoryList({ profileId }: { profileId: string }) {
       .eq('profile_id', profileId).limit(config.ui.historyCap)
     const rows = mine ?? []
     const ids = rows.map(r => r.match_id)
-    const { data: all } = ids.length
-      ? await supabase.from('match_players')
-          .select('match_id, seat, nickname, profile_id, score, is_bot, profile:profiles(username)')
-          .in('match_id', ids)
-      : { data: [] }
+    // PostgREST plafonne toute réponse à max_rows (supabase/config.toml). À 8 joueurs par
+    // partie, demander tous les participants des `historyCap` matchs en un seul .in() peut
+    // dépasser ce plafond et tronquer la réponse en silence (lignes perdues arbitraires,
+    // classement faussé). On découpe donc en lots de historyBatchSize matchs, en parallèle.
+    // Clé dédiée, distincte de historyPageSize (pagination d'affichage) : ce découpage
+    // protège le plafond serveur et ne doit pas bouger si on ajuste la pagination.
+    const batches: string[][] = []
+    for (let i = 0; i < ids.length; i += config.ui.historyBatchSize) {
+      batches.push(ids.slice(i, i + config.ui.historyBatchSize))
+    }
+    const batchResults = await Promise.all(batches.map(batch =>
+      supabase.from('match_players')
+        .select('match_id, seat, nickname, profile_id, score, money_left, is_bot, profile:profiles(username)')
+        .in('match_id', batch),
+    ))
+    const all = batchResults.flatMap(({ data }) => data ?? [])
     setHistory(rows.map(r => {
-      const opp = (all ?? []).find(o => o.match_id === r.match_id && o.seat !== r.seat)
+      const table = all.filter(o => o.match_id === r.match_id)
+      const classement = rankRows(table, m => ({ total: m.score, money: m.money_left }))
       return {
         matchId: r.match_id,
         finishedAt: (r.match as { finished_at: string } | null)?.finished_at ?? '',
         result: r.result as HistoryRow['result'],
         score: r.score,
         moneyLeft: r.money_left,
-        opponent: opp ? {
-          nickname: opp.nickname,
-          username: (opp.profile as { username: string } | null)?.username ?? null,
-          score: opp.score,
-          isBot: opp.is_bot,
-        } : null,
+        // pas de repli fabriqué : si ma ligne manque du lot (troncature, RLS future),
+        // le rang reste absent plutôt que de mentir (cf. constat de revue)
+        rank: classement.find(c => c.row.seat === r.seat)?.rank ?? null,
+        players: table.length,
+        opponents: classement.filter(c => c.row.seat !== r.seat).map(c => ({
+          nickname: c.row.nickname,
+          username: (c.row.profile as { username: string } | null)?.username ?? null,
+          score: c.row.score,
+          isBot: c.row.is_bot,
+        })),
       }
     }).sort((a, b) => b.finishedAt.localeCompare(a.finishedAt)))
   }, [profileId])
@@ -79,16 +99,26 @@ export default function MatchHistoryList({ profileId }: { profileId: string }) {
         <div key={r.matchId} className="board-row">
           <div className="board-info">
             <strong>{t(`history.${r.result}`)}</strong>
-            {' '}{t('history.vs')}{' '}
-            {r.opponent
-              ? r.opponent.username
-                ? <Link className="player-link" to={`/profile/${r.opponent.username}`}>{r.opponent.username}</Link>
-                : <>{r.opponent.nickname}{r.opponent.isBot && <span className="badge"> {t('common.bot')}</span>}</>
-              : '?'}
+            {r.players > 1 && r.rank !== null && (
+              <> {r.rank === 1
+                ? t('history.rankFirst', { total: r.players })
+                : t('history.rank', { rank: r.rank, total: r.players })}</>
+            )}
+            {r.opponents.length > 0 && <> {t('history.vs')} </>}
+            {/* deux adversaires nommés, le reste compté : une ligne reste lisible à huit */}
+            {r.opponents.slice(0, 2).map((o, i) => (
+              <span key={o.nickname + i}>
+                {i > 0 && ', '}
+                {o.username
+                  ? <Link className="player-link" to={`/profile/${o.username}`}>{o.username}</Link>
+                  : <>{o.nickname}{o.isBot && <span className="badge"> {t('common.bot')}</span>}</>}
+              </span>
+            ))}
+            {r.opponents.length > 2 && <> {t('history.andMore', { n: r.opponents.length - 2 })}</>}
             <span className="hint">
-              {r.opponent
+              {r.opponents.length === 1
                 ? t('history.lineVs', {
-                    score: r.score, oppScore: r.opponent.score, money: r.moneyLeft, date,
+                    score: r.score, oppScore: r.opponents[0].score, money: r.moneyLeft, date,
                   })
                 : t('history.lineSolo', { score: r.score, money: r.moneyLeft, date })}
             </span>
