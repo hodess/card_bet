@@ -40,8 +40,9 @@ navigateur. Mise en place de Supabase : [`initSupabase.md`](initSupabase.md).
   historique persistant (résumé + deck final), profils publics avec face-à-face,
   amis. Les parties restent temporaires ; seuls comptes/historique/amis sont
   persistés. Design : [`docs/superpowers/specs/2026-07-29-v1-comptes-design.md`](docs/superpowers/specs/2026-07-29-v1-comptes-design.md)
-- **V2** — joker (refuser une ouverture forcée), 2 à 8 joueurs, plusieurs packs
-  (Football, Basket, Animés…), invitations d'amis en partie, ranking ELO.
+- **V2 (en cours)** — 2 à 8 joueurs, plusieurs packs (Football, Naruto…) choisis
+  dans le salon d'une partie privée. Reste à faire : joker (refuser une ouverture
+  forcée), invitations d'amis en partie, ranking ELO.
 
 ## Développement local
 

@@ -111,7 +111,8 @@ select join_game((select code from games where id = (select gid from big)), 'B5'
 select test_login('00000000-0000-0000-0000-000000000001');
 select throws_ok(
   format($$select start_game(%L)$$, (select gid from big)),
-  'P0001', 'NOT_ENOUGH_CARDS', '5 joueurs × deck 10 dépassent le pack de 40');
+  'P0001', 'NOT_ENOUGH_CARDS',
+  '5 joueurs × deck 10 dépassent les 40 cartes du pack football');
 
 -- un joueur seul ne lance pas
 create temp table solo as select (create_game('Seul')->>'game_id')::uuid as gid;
@@ -148,7 +149,8 @@ select is(
 select test_login('00000000-0000-0000-0000-000000000001');
 select throws_ok(
   $$select create_game('GrosPublic', 6, null, null, null, null, 'public', 8)$$,
-  'P0001', 'NOT_ENOUGH_CARDS', 'publique deck 6 / 8 places refusée à la création (40 cartes insuffisantes)');
+  'P0001', 'NOT_ENOUGH_CARDS',
+  'publique deck 6 / 8 places refusée à la création (football n''a que 40 cartes)');
 select lives_ok(
   $$select create_game('GrosPrive', 6, null, null, null, null, 'private', 8)$$,
   'privée avec les mêmes réglages acceptée (rattrapable par start_game)');

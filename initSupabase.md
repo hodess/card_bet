@@ -109,7 +109,11 @@ npx supabase link --project-ref <project-ref>   # une fois
 npx supabase db push --include-seed             # applique les migrations locales (et le seed) au cloud
 ```
 
-⚠️ `seed.sql` n'est pas idempotent : le rejouer duplique les 40 cartes. N'inclus le seed que sur le premier push, ou exécute-le une seule fois via l'éditeur SQL.
+`seed.sql` est un fichier **généré** (`npm run cards:seed`, ne jamais l'éditer à la
+main) qui upsert les cartes (`on conflict (id) do update`) : il est idempotent, le
+rejouer ne duplique rien. En production, ce sont les migrations générées par
+`npm run cards:migration` qui portent les cartes ; `--include-seed` ne sert donc
+qu'à amorcer un environnement neuf.
 
 ### e. Générer les types TypeScript
 
@@ -151,8 +155,9 @@ Les deux interdits :
 
 1. **Jamais de SQL de schéma dans le dashboard prod** — il divergerait de git et la
    migration suivante casserait.
-2. **Jamais re-pousser le seed** (`--include-seed`) — non idempotent, les 40 cartes
-   seraient dupliquées.
+2. **Jamais éditer `seed.sql` à la main** — il est généré par `npm run cards:seed` ;
+   en production, ce sont les migrations (`npm run cards:migration`) qui portent
+   les cartes, le seed n'est là que pour amorcer un environnement neuf.
 
 ## CI/CD
 

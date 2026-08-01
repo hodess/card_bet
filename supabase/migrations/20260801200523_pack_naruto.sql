@@ -1,6 +1,5 @@
--- Fichier généré par `npm run cards:seed` — NE PAS ÉDITER.
--- Source de vérité : data/packs/*.json. Modifier un pack puis régénérer.
--- Un test vitest vérifie que ce fichier correspond bien aux JSON.
+-- Généré par `npm run cards:migration -- pack_naruto` depuis data/packs/*.json.
+-- Additif : rien n'est jamais supprimé.
 
 insert into packs (slug, sort_order) values
   ('football', 1),

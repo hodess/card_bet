@@ -4,6 +4,7 @@ import type { GameState } from '../hooks/useGame'
 import GameSettingsFields, { type GameSettings } from './GameSettingsFields'
 import PlayerName from './PlayerName'
 import { useUsernames } from '../hooks/useUsernames'
+import { usePacks } from '../hooks/usePacks'
 import { errorMessage } from '../lib/errors'
 import { useT } from '../hooks/useT'
 import config from '../config.json'
@@ -16,6 +17,7 @@ export default function Lobby({ state, onAddBot }: {
   const { t } = useT()
   const isHost = players.find(p => p.id === myPlayerId)?.seat === 0
   const usernames = useUsernames(players.map(p => p.auth_uid))
+  const { packs, error: packsError } = usePacks()
   const isPrivate = game!.visibility === 'private'
   // Réarmé dès que la table change : le bot est arrivé (ou son arrivée a échoué).
   const [botPending, setBotPending] = useState(false)
@@ -40,6 +42,7 @@ export default function Lobby({ state, onAddBot }: {
     minBid: game!.min_bid,
     closeDelaySeconds: game!.close_delay_seconds,
     maxPlayers: game!.max_players,
+    pack: game!.pack,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,9 +55,10 @@ export default function Lobby({ state, onAddBot }: {
       minBid: game!.min_bid,
       closeDelaySeconds: game!.close_delay_seconds,
       maxPlayers: game!.max_players,
+      pack: game!.pack,
     })
   }, [game!.deck_size, game!.start_bankroll, game!.min_bid, game!.close_delay_seconds,
-      game!.max_players])
+      game!.max_players, game!.pack])
 
   async function saveSettings() {
     setSaving(true)
@@ -66,6 +70,7 @@ export default function Lobby({ state, onAddBot }: {
       p_min_bid: draft.minBid,
       p_close_delay_seconds: draft.closeDelaySeconds,
       p_max_players: draft.maxPlayers,
+      p_pack: draft.pack,
     })
     setSaving(false)
     if (error) setError(errorMessage(error))
@@ -97,7 +102,11 @@ export default function Lobby({ state, onAddBot }: {
 
   return (
     <main className="page">
-      <h1>{t('lobby.title')} <span className="badge">{isPrivate ? t('lobby.private') : t('lobby.public')}</span></h1>
+      <h1>
+        {t('lobby.title')}{' '}
+        <span className="badge">{isPrivate ? t('lobby.private') : t('lobby.public')}</span>{' '}
+        <span className="badge">{t(`packs.${game!.pack}.name`)}</span>
+      </h1>
       <p>{t('lobby.code')} <strong className="code">{game!.code}</strong></p>
       <p className="hint">
         {t('lobby.playerCount', { count: players.length, max: game!.max_players })}
@@ -118,7 +127,10 @@ export default function Lobby({ state, onAddBot }: {
 
       <section className="public-setup">
         <h2>{canEdit ? t('lobby.settings') : t('lobby.settingsReadOnly')}</h2>
-        <GameSettingsFields value={draft} onChange={setDraft} disabled={!canEdit} />
+        <GameSettingsFields value={draft} onChange={setDraft} disabled={!canEdit}
+          packs={packs.map(p => p.slug)} />
+        {/* échec de list_packs : le sélecteur retombe en lecture seule sans ce message */}
+        {packsError && <p className="error">{packsError}</p>}
         {canEdit && (
           <button className="secondary" onClick={saveSettings} disabled={saving}>
             {saving ? t('lobby.saving') : t('lobby.saveSettings')}

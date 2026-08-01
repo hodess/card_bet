@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "cards:seed": "tsx scripts/build-cards.ts seed",
+    "cards:migration": "tsx scripts/build-cards.ts migration"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",
@@ -24,6 +26,7 @@
     "jsdom": "^30.0.1",
     "oxlint": "^1.71.0",
     "supabase": "^2.110.0",
+    "tsx": "^4.23.1",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
     "vitest": "^4.1.10"

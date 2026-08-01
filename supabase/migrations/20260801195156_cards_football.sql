@@ -1,10 +1,8 @@
--- Fichier généré par `npm run cards:seed` — NE PAS ÉDITER.
--- Source de vérité : data/packs/*.json. Modifier un pack puis régénérer.
--- Un test vitest vérifie que ce fichier correspond bien aux JSON.
+-- Généré par `npm run cards:migration -- cards_football` depuis data/packs/*.json.
+-- Additif : rien n'est jamais supprimé.
 
 insert into packs (slug, sort_order) values
-  ('football', 1),
-  ('naruto', 2)
+  ('football', 1)
 on conflict (slug) do update set sort_order = excluded.sort_order;
 
 insert into cards (id, name, position, rating, pack) overriding system value values
@@ -47,47 +45,7 @@ insert into cards (id, name, position, rating, pack) overriding system value val
   (37, 'Eduardo Camavinga', 'MID', 84, 'football'),
   (38, 'Aurélien Tchouaméni', 'MID', 84, 'football'),
   (39, 'Bradley Barcola', 'ATT', 84, 'football'),
-  (40, 'Désiré Doué', 'MID', 83, 'football'),
-  (1000, 'Naruto Uzumaki', 'NIN', 91, 'naruto'),
-  (1001, 'Madara Uchiha', 'NIN', 91, 'naruto'),
-  (1002, 'Sasuke Uchiha', 'NIN', 90, 'naruto'),
-  (1003, 'Hashirama Senju', 'NIN', 90, 'naruto'),
-  (1004, 'Itachi Uchiha', 'GEN', 89, 'naruto'),
-  (1005, 'Minato Namikaze', 'NIN', 89, 'naruto'),
-  (1006, 'Tsunade', 'MED', 89, 'naruto'),
-  (1007, 'Kakashi Hatake', 'NIN', 88, 'naruto'),
-  (1008, 'Might Guy', 'TAI', 88, 'naruto'),
-  (1009, 'Obito Uchiha', 'NIN', 88, 'naruto'),
-  (1010, 'Jiraiya', 'INV', 88, 'naruto'),
-  (1011, 'Gaara', 'NIN', 87, 'naruto'),
-  (1012, 'Orochimaru', 'INV', 87, 'naruto'),
-  (1013, 'Killer Bee', 'NIN', 87, 'naruto'),
-  (1014, 'Tobirama Senju', 'NIN', 87, 'naruto'),
-  (1015, 'Rock Lee', 'TAI', 86, 'naruto'),
-  (1016, 'Neji Hyuga', 'TAI', 86, 'naruto'),
-  (1017, 'Shikamaru Nara', 'NIN', 86, 'naruto'),
-  (1018, 'Hiruzen Sarutobi', 'NIN', 86, 'naruto'),
-  (1019, 'Sakura Haruno', 'MED', 86, 'naruto'),
-  (1020, 'Hinata Hyuga', 'TAI', 85, 'naruto'),
-  (1021, 'Kisame Hoshigaki', 'NIN', 85, 'naruto'),
-  (1022, 'Nagato', 'NIN', 85, 'naruto'),
-  (1023, 'Konan', 'NIN', 85, 'naruto'),
-  (1024, 'Deidara', 'NIN', 85, 'naruto'),
-  (1025, 'Sasori', 'INV', 84, 'naruto'),
-  (1026, 'Kurenai Yuhi', 'GEN', 84, 'naruto'),
-  (1027, 'Asuma Sarutobi', 'TAI', 84, 'naruto'),
-  (1028, 'Kabuto Yakushi', 'MED', 84, 'naruto'),
-  (1029, 'Temari', 'NIN', 84, 'naruto'),
-  (1030, 'Kankuro', 'INV', 83, 'naruto'),
-  (1031, 'Ino Yamanaka', 'GEN', 83, 'naruto'),
-  (1032, 'Choji Akimichi', 'TAI', 83, 'naruto'),
-  (1033, 'Kiba Inuzuka', 'INV', 83, 'naruto'),
-  (1034, 'Shino Aburame', 'INV', 83, 'naruto'),
-  (1035, 'Tenten', 'NIN', 82, 'naruto'),
-  (1036, 'Anko Mitarashi', 'GEN', 82, 'naruto'),
-  (1037, 'Yamato', 'NIN', 82, 'naruto'),
-  (1038, 'Sai', 'NIN', 82, 'naruto'),
-  (1039, 'Chiyo', 'MED', 82, 'naruto')
+  (40, 'Désiré Doué', 'MID', 83, 'football')
 on conflict (id) do update set
   name = excluded.name,
   position = excluded.position,
