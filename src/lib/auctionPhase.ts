@@ -62,6 +62,13 @@ export function isUrgent(remaining: number): boolean {
   return remaining > 0 && remaining < A.urgentMs
 }
 
+// L'enchère est close : le tampon « Adjugé » est tombé, la carte part chez son
+// gagnant (vol puis atterrissage). Trois consommateurs (CardCount, CardScene,
+// Auction) répétaient ce même prédicat : une seule vérité ici.
+export function isSettled(phase: Phase): boolean {
+  return phase === 'sold' || phase === 'fly' || phase === 'landed'
+}
+
 export function showPips(total: number): boolean {
   return total <= A.maxPips
 }

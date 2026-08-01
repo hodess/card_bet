@@ -1,16 +1,21 @@
 import { useEffect } from 'react'
+import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import type { GameState } from '../hooks/useGame'
 import { useServerOffset } from '../hooks/useServerOffset'
 import { useCountdown } from '../hooks/useCountdown'
 import { useAuctionPhase } from '../hooks/useAuctionPhase'
+import { isSettled, isUrgent } from '../lib/auctionPhase'
 import { maxBid, cardsOf } from '../lib/game'
-import { playerColor, stripRows } from '../lib/players'
+import { playerColor, seatRows } from '../lib/players'
+import { seatOrder } from '../lib/table'
+import config from '../config.json'
 import AuctionHeader from './AuctionHeader'
 import LeaderBanner from './LeaderBanner'
 import CardScene from './CardScene'
+import CardCount from './CardCount'
 import BidButtons from './BidButtons'
-import PlayersStrip from './PlayersStrip'
+import PlayerSeats from './PlayerSeats'
 import { useT } from '../hooks/useT'
 
 export default function Auction({ state, onSequenceChange }: {
@@ -37,12 +42,15 @@ export default function Auction({ state, onSequenceChange }: {
 
   const anim = useAuctionPhase(auction, ownedCards)
 
+  // Calculée ici et non dans les deux composants qui l'affichent : une seule vérité.
+  const urgent = anim.phase === 'bid' && isUrgent(remaining)
+
   const me = players.find(p => p.id === myPlayerId)
   const missing = game!.deck_size - cardsOf(ownedCards, myPlayerId).length
   const iLead = auction?.current_bidder === myPlayerId
   const iPassed = !!(myPlayerId && auction?.passed.includes(myPlayerId))
   const myMax = me ? maxBid(me.bankroll, missing, game!.min_bid) : 0
-  const closed = anim.phase === 'sold' || anim.phase === 'fly' || anim.phase === 'landed'
+  const closed = isSettled(anim.phase)
   // Adjudication puis entrée de la carte : le serveur refuse toute action tant
   // que l'enchère n'a pas démarré (AUCTION_NOT_STARTED), l'interface aussi.
   const cantAct = iLead || iPassed || missing <= 0 || expired || closed || anim.phase === 'reveal'
@@ -87,19 +95,43 @@ export default function Auction({ state, onSequenceChange }: {
     : closed ? t('auction.soldTo')
     : leader?.id === myPlayerId ? t('auction.youLead')
     : t('auction.chipLeading')
-  const rows = stripRows({
+  const rows = seatRows({
     players, ownedCards, deckSize: game!.deck_size,
     leaderId: anim.leaderId, passedIds: auction.passed,
     pendingWinnerId: anim.pendingWinnerId, justWon: anim.justWon,
   })
+  const sieges = seatOrder(rows, myPlayerId)
+  // La géométrie des sièges est calculée sur cette même boîte (voir lib/table.ts) :
+  // une seule source de vérité, côté config.
+  const tableVars = {
+    '--card-w': `${config.ui.auction.table.cardW}px`,
+    '--card-ratio': `${config.ui.auction.table.cardW} / ${config.ui.auction.table.cardH}`,
+    '--lane-top': `${config.ui.auction.table.laneTop}px`,
+  } as CSSProperties
 
   return (
     <main className="page auction">
       <AuctionHeader
         seq={auction.seq}
         total={game!.deck_size * players.length}
-        bankroll={me?.bankroll ?? 0}
       />
+      <div className="auction-table" style={tableVars}>
+        <div className="table-plate">
+          <CardScene
+            card={anim.card}
+            phase={anim.phase}
+            remaining={remaining}
+            windowMs={windowMs}
+            color={couleur}
+            urgent={urgent}
+            flyStyle={anim.flyStyle}
+            winnerName={leader?.nickname ?? ''}
+            amount={anim.bid}
+            cardRef={anim.cardRef}
+          />
+          <PlayerSeats rows={sieges} myPlayerId={myPlayerId} onDeckRef={anim.setDeckRef} />
+        </div>
+      </div>
       <LeaderBanner
         color={couleur}
         overline={surTitre}
@@ -109,20 +141,11 @@ export default function Auction({ state, onSequenceChange }: {
         raise={anim.raise}
         neutral={neutre}
       />
-      <CardScene
-        card={anim.card}
-        phase={anim.phase}
-        remaining={remaining}
-        windowMs={windowMs}
-        color={couleur}
-        flyStyle={anim.flyStyle}
-        winnerName={leader?.nickname ?? ''}
-        amount={anim.bid}
-        cardRef={anim.cardRef}
-      />
+      <CardCount phase={anim.phase} remaining={remaining} urgent={urgent} color={couleur} />
       <BidButtons
         currentBid={auction.current_bid}
         myMax={myMax}
+        bankroll={me?.bankroll ?? 0}
         canAct={!cantAct}
         hasPassed={iPassed}
         iLead={iLead}
@@ -131,7 +154,6 @@ export default function Auction({ state, onSequenceChange }: {
         onBid={bid}
         onPass={pass}
       />
-      <PlayersStrip rows={rows} onDeckRef={anim.setDeckRef} />
     </main>
   )
 }

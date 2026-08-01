@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { playerColor, stripRows } from './players'
+import { playerColor, seatRows } from './players'
 
 describe('playerColor', () => {
   it('donne une couleur stable pour un siège donné', () => {
@@ -30,9 +30,9 @@ const base = {
   justWon: null,
 }
 
-describe('stripRows', () => {
+describe('seatRows', () => {
   it('compte les slots remplis et marque le meneur', () => {
-    const [alice, bob] = stripRows(base)
+    const [alice, bob] = seatRows(base)
     expect(alice.filled).toBe(1)
     expect(alice.status).toBe(null)
     expect(bob.filled).toBe(0)
@@ -42,7 +42,7 @@ describe('stripRows', () => {
 
   it("cache la carte adjugée tant qu'elle n'a pas atterri", () => {
     // player_cards est déjà arrivé côté realtime, mais la carte vole encore
-    const [alice] = stripRows({
+    const [alice] = seatRows({
       ...base, ownedCards: [{ player_id: 'a' }, { player_id: 'a' }], pendingWinnerId: 'a',
     })
     expect(alice.filled).toBe(1)
@@ -50,7 +50,7 @@ describe('stripRows', () => {
   })
 
   it("à l'atterrissage : slot qui pope, coût payé et statut gagne", () => {
-    const [alice] = stripRows({
+    const [alice] = seatRows({
       ...base,
       ownedCards: [{ player_id: 'a' }, { player_id: 'a' }],
       pendingWinnerId: null,
@@ -63,17 +63,17 @@ describe('stripRows', () => {
   })
 
   it('le statut gagne prime sur mène pour le même joueur', () => {
-    const [, bob] = stripRows({ ...base, justWon: { playerId: 'b', amount: 100 } })
+    const [, bob] = seatRows({ ...base, justWon: { playerId: 'b', amount: 100 } })
     expect(bob.status).toBe('wins')
   })
 
   it('marque les joueurs qui ont passé', () => {
-    const [alice] = stripRows({ ...base, passedIds: ['a'] })
+    const [alice] = seatRows({ ...base, passedIds: ['a'] })
     expect(alice.status).toBe('passed')
   })
 
   it('ne descend jamais sous zéro slot rempli', () => {
-    const [, bob] = stripRows({ ...base, pendingWinnerId: 'b' })
+    const [, bob] = seatRows({ ...base, pendingWinnerId: 'b' })
     expect(bob.filled).toBe(0)
   })
 })

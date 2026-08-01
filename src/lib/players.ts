@@ -11,7 +11,7 @@ export function playerColor(seat: number): string {
   return PLAYER_COLORS[seat % PLAYER_COLORS.length]
 }
 
-export type StripRow = {
+export type SeatRow = {
   id: string
   nickname: string
   seat: number
@@ -23,7 +23,7 @@ export type StripRow = {
   paid: number | null
 }
 
-export type StripInput = {
+export type SeatInput = {
   players: { id: string; nickname: string; bankroll: number; seat: number }[]
   ownedCards: { player_id: string }[]
   deckSize: number
@@ -35,7 +35,7 @@ export type StripInput = {
   justWon: { playerId: string; amount: number } | null
 }
 
-export function stripRows(input: StripInput): StripRow[] {
+export function seatRows(input: SeatInput): SeatRow[] {
   const { players, ownedCards, deckSize, leaderId, passedIds, pendingWinnerId, justWon } = input
   return players.map(p => {
     const owned = cardsOf(ownedCards, p.id).length
