@@ -5,6 +5,14 @@
     "minBid": 10,
     "closeDelaySeconds": 8,
     "maxAuctionSeconds": 60,
+    "maxPlayers": 2,
+    "limits": {
+      "deckSize": { "min": 1, "max": 10, "step": 1 },
+      "startBankroll": { "min": 100, "max": 100000, "step": 100 },
+      "minBid": { "min": 1, "max": 1000, "step": 5 },
+      "closeDelaySeconds": { "min": 1, "max": 60, "step": 1 },
+      "maxPlayers": { "min": 2, "max": 8, "step": 1 }
+    },
     "ui": {
       "increments": [10, 50, 100]
     }
@@ -15,13 +23,16 @@
     "pollMs": 800,
     "delayMinMs": 500,
     "delayMaxMs": 2500,
+    "joinTimeoutMs": 5000,
     "names": ["Bot Zizou", "Bot Bielsa", "Bot Pep", "Bot Arsène"]
   },
   "ui": {
     "historyPageSize": 20,
+    "historyBatchSize": 20,
     "historyCap": 200,
     "searchDebounceMs": 250,
     "boardPollMs": 3000,
+    "lobbyPollMs": 3000,
     "auction": {
       "revealMs": 380,
       "soldMs": 950,

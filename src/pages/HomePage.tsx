@@ -13,6 +13,7 @@ type PublicGame = {
   host_nickname: string
   host_username: string | null
   player_count: number
+  max_players: number
   deck_size: number
   start_bankroll: number
   min_bid: number
@@ -25,6 +26,7 @@ const DEFAULTS: GameSettings = {
   startBankroll: config.game.startBankroll,
   minBid: config.game.minBid,
   closeDelaySeconds: config.game.closeDelaySeconds,
+  maxPlayers: config.game.maxPlayers,
 }
 
 export default function HomePage() {
@@ -62,6 +64,7 @@ export default function HomePage() {
         startBankroll: s.startBankroll,
         minBid: s.minBid,
         closeDelaySeconds: s.closeDelaySeconds,
+        maxPlayers: s.maxPlayers,
         visibility,
       })
       nav(`/game/${gameId}`)
@@ -126,6 +129,9 @@ export default function HomePage() {
               {g.host_username
                 ? <Link className="player-link" to={`/profile/${g.host_username}`}><strong>{g.host_username}</strong></Link>
                 : <strong>{g.host_nickname}</strong>}
+              <span className="hint">
+                {t('lobby.playerCount', { count: g.player_count, max: g.max_players })}
+              </span>
               <span className="hint">
                 {t('home.gameSummary', {
                   deck: g.deck_size,

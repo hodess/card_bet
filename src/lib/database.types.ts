@@ -203,6 +203,7 @@ export type Database = {
           deck_size: number
           id: string
           max_auction_seconds: number
+          max_players: number
           min_bid: number
           next_game_id: string | null
           start_bankroll: number
@@ -216,6 +217,7 @@ export type Database = {
           deck_size?: number
           id?: string
           max_auction_seconds?: number
+          max_players?: number
           min_bid?: number
           next_game_id?: string | null
           start_bankroll?: number
@@ -229,6 +231,7 @@ export type Database = {
           deck_size?: number
           id?: string
           max_auction_seconds?: number
+          max_players?: number
           min_bid?: number
           next_game_id?: string | null
           start_bankroll?: number
@@ -469,6 +472,7 @@ export type Database = {
           p_close_delay_seconds?: number
           p_deck_size?: number
           p_max_auction_seconds?: number
+          p_max_players?: number
           p_min_bid?: number
           p_start_bankroll?: number
           p_visibility?: string
@@ -492,6 +496,10 @@ export type Database = {
         Args: { g_id: string; nickname: string }
         Returns: Json
       }
+      kick_player: {
+        Args: { g_id: string; p_player_id: string }
+        Returns: undefined
+      }
       list_public_games: { Args: never; Returns: Json }
       open_next_auction: {
         Args: { g_id: string; p_grace?: boolean }
@@ -510,6 +518,7 @@ export type Database = {
           p_close_delay_seconds?: number
           p_deck_size?: number
           p_max_auction_seconds?: number
+          p_max_players?: number
           p_min_bid?: number
           p_start_bankroll?: number
         }
