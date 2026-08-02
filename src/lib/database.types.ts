@@ -400,7 +400,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string
           emoji?: string
-          name: string
+          name?: string
           owner_id?: string | null
           positions?: Json
           slug: string
@@ -561,6 +561,10 @@ export type Database = {
       get_profile_stats: { Args: { p_username: string }; Returns: Json }
       get_server_time: { Args: never; Returns: string }
       has_challenger: { Args: { p_auction_id: string }; Returns: boolean }
+      install_official_pack: {
+        Args: { p: Json; p_slug: string; p_sort_order: number }
+        Returns: undefined
+      }
       is_player: { Args: { g_id: string }; Returns: boolean }
       join_game: {
         Args: { game_code: string; nickname: string; p_is_bot?: boolean }
@@ -585,7 +589,12 @@ export type Database = {
       profile_id_of: { Args: { p_username: string }; Returns: string }
       rematch_game: { Args: { old_game_id: string }; Returns: Json }
       remove_friendship: { Args: { p_username: string }; Returns: undefined }
+      replace_pack_cards: {
+        Args: { p: Json; p_slug: string }
+        Returns: undefined
+      }
       send_friend_request: { Args: { p_username: string }; Returns: undefined }
+      slugify: { Args: { p: string }; Returns: string }
       start_game: { Args: { g_id: string }; Returns: undefined }
       update_game_settings: {
         Args: {
@@ -600,6 +609,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      validate_pack_payload: { Args: { p: Json }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
