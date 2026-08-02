@@ -11,6 +11,51 @@ permissions:
   id-token: write
 
 jobs:
+  # Le job `test` démarre sur une base VIDE : il prouve que les migrations
+  # s'appliquent depuis zéro, jamais qu'elles s'appliquent par-dessus la prod.
+  # C'est ce trou qui a laissé passer une migration antérieure à celles déjà
+  # déployées : PR verte, puis `db push` en échec sur main, après le merge.
+  # Ce job-ci reproduit l'ordre de la prod. Il ne déploie rien.
+  migrations:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Refuser une migration antérieure à celles déjà déployées
+        run: |
+          git fetch -q origin "$BASE"
+          ./scripts/check-migration-order.sh "origin/$BASE" HEAD
+        env:
+          BASE: ${{ github.base_ref }}
+      - name: Partir de l'état de la branche de base
+        run: |
+          git checkout "origin/$BASE" -- supabase/migrations
+          supabase start
+        env:
+          BASE: ${{ github.base_ref }}
+      - name: Appliquer les nouvelles migrations par-dessus, comme le fait la prod
+        run: |
+          git checkout HEAD -- supabase/migrations
+          # Renommer ou supprimer une migration déjà appliquée est indétectable
+          # d'ici : la base garde la trace de l'ancien nom. Ça n'arrive qu'en
+          # rattrapage d'un déploiement cassé, et ça demande un œil humain — on
+          # le dit au lieu de faire semblant de l'avoir vérifié.
+          if git diff --name-only --diff-filter=DR "origin/$BASE"...HEAD -- supabase/migrations/ | grep -q .; then
+            echo "::warning::Des migrations ont été renommées ou supprimées : application incrémentale NON vérifiée. À valider à la main."
+            git diff --name-status --diff-filter=DR "origin/$BASE"...HEAD -- supabase/migrations/
+          else
+            supabase migration up
+            echo "Migrations appliquées par-dessus l'état de origin/$BASE sans erreur."
+            supabase test db
+          fi
+        env:
+          BASE: ${{ github.base_ref }}
+
   test:
     runs-on: ubuntu-latest
     steps:
