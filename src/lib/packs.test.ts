@@ -1,162 +1,249 @@
 import { describe, expect, it } from 'vitest'
-import { parsePackJson, seedSql, upsertSql, validatePacks, type Pack } from './packs'
+import {
+  formatPackJson, installSql, parseOfficialPackJson, parsePackJson, seedSql,
+  validateOfficialPacks, type OfficialPack, type PackError, type PackInput,
+} from './packs'
 
-const CARTE = { id: 1, name: 'Kylian Mbappé', position: 'ATT', rating: 91 }
-const PACK = { slug: 'football', sortOrder: 1, cards: [CARTE] }
+const PACK: PackInput = {
+  name: 'Pokémon Gen 1',
+  emoji: '⚡',
+  description: 'Les 151 originaux.',
+  positions: { FEU: 'Feu', EAU: 'Eau' },
+  cards: [
+    { name: 'Dracaufeu', position: 'FEU', rating: 92 },
+    { name: 'Tortank', position: 'EAU', rating: 88 },
+  ],
+}
 const json = (o: unknown) => JSON.stringify(o)
+const cles = (errors: { key: string }[]) => errors.map(e => e.key)
 
 describe('parsePackJson', () => {
   it('accepte un pack valide', () => {
-    const { pack, errors } = parsePackJson(json(PACK), 'football')
+    const { pack, errors } = parsePackJson(json(PACK))
     expect(errors).toEqual([])
     expect(pack).toEqual(PACK)
   })
 
-  it('rejette un JSON mal formé en citant le fichier', () => {
-    const { pack, errors } = parsePackJson('{ pas du json', 'football')
+  it('complète les champs facultatifs absents', () => {
+    const { pack } = parsePackJson(json({ ...PACK, emoji: undefined, description: undefined }))
+    expect(pack?.emoji).toBe('')
+    expect(pack?.description).toBe('')
+  })
+
+  it('rejette un JSON mal formé', () => {
+    const { pack, errors } = parsePackJson('{ pas du json')
     expect(pack).toBeNull()
-    expect(errors).toHaveLength(1)
-    expect(errors[0]).toContain('football.json')
+    expect(cles(errors)).toContain('packError.json')
   })
 
   it("rejette une racine qui n'est pas un objet", () => {
-    expect(parsePackJson('[]', 'football').pack).toBeNull()
-    expect(parsePackJson('42', 'football').pack).toBeNull()
-  })
-
-  it('rejette un slug qui ne correspond pas au nom de fichier', () => {
-    const { errors } = parsePackJson(json({ ...PACK, slug: 'foot' }), 'football')
-    expect(errors.some(e => e.includes('nom de fichier'))).toBe(true)
+    expect(parsePackJson('[]').pack).toBeNull()
+    expect(parsePackJson('42').pack).toBeNull()
   })
 
   it('rejette un champ inconnu au niveau du pack', () => {
-    const { errors } = parsePackJson(json({ ...PACK, auteur: 'moi' }), 'football')
-    expect(errors.some(e => e.includes('auteur'))).toBe(true)
+    const { errors } = parsePackJson(json({ ...PACK, auteur: 'moi' }))
+    expect(cles(errors)).toContain('packError.unknownField')
+    expect(errors[0].params?.field).toBe('auteur')
   })
 
-  it("rejette un champ inconnu au niveau d'une carte — le futur \"stats\" inclus", () => {
-    const cards = [{ ...CARTE, stats: { pac: 97 } }]
-    const { errors } = parsePackJson(json({ ...PACK, cards }), 'football')
-    expect(errors.some(e => e.includes('stats'))).toBe(true)
+  it('rejette un champ inconnu au niveau d’une carte', () => {
+    const cards = [{ ...PACK.cards[0], stats: { pac: 97 } }, PACK.cards[1]]
+    const { errors } = parsePackJson(json({ ...PACK, cards }))
+    expect(cles(errors)).toContain('packError.cardUnknownField')
   })
 
-  it('rejette un sortOrder non entier', () => {
-    const { errors } = parsePackJson(json({ ...PACK, sortOrder: 1.5 }), 'football')
-    expect(errors.some(e => e.includes('sortOrder'))).toBe(true)
+  it('rejette un nom de pack vide ou trop long', () => {
+    expect(cles(parsePackJson(json({ ...PACK, name: '  ' })).errors)).toContain('packError.name')
+    expect(cles(parsePackJson(json({ ...PACK, name: 'x'.repeat(41) })).errors)).toContain('packError.name')
   })
 
-  it('rejette une liste de cartes vide ou absente', () => {
-    expect(parsePackJson(json({ ...PACK, cards: [] }), 'football').pack).toBeNull()
-    expect(parsePackJson(json({ slug: 'football', sortOrder: 1 }), 'football').pack).toBeNull()
+  it('rejette un emoji trop long', () => {
+    expect(cles(parsePackJson(json({ ...PACK, emoji: 'x'.repeat(9) })).errors)).toContain('packError.emoji')
+  })
+
+  it('accepte un emoji de 5 caractères non-BMP (chaque emoji occupe 2 unités UTF-16)', () => {
+    // Postgres compte des caractères (char_length) : 5 emojis = 5 caractères,
+    // bien en dessous de emojiMaxLength (8) — même si `.length` en JS vaudrait 10.
+    const { pack, errors } = parsePackJson(json({ ...PACK, emoji: '🌀🌀🌀🌀🌀' }))
+    expect(cles(errors)).not.toContain('packError.emoji')
+    expect(pack?.emoji).toBe('🌀🌀🌀🌀🌀')
+  })
+
+  it('rejette une description trop longue', () => {
+    expect(cles(parsePackJson(json({ ...PACK, description: 'x'.repeat(201) })).errors))
+      .toContain('packError.description')
+  })
+
+  it('rejette un vocabulaire de positions vide ou trop grand', () => {
+    expect(cles(parsePackJson(json({ ...PACK, positions: {} })).errors)).toContain('packError.positions')
+    const trop = Object.fromEntries(Array.from({ length: 13 }, (_, i) => [`P${i}`, 'x']))
+    expect(cles(parsePackJson(json({ ...PACK, positions: trop })).errors)).toContain('packError.positions')
+  })
+
+  it('ne cascade pas un cardUnknownPosition par carte quand le vocabulaire est structurellement invalide', () => {
+    const cards = Array.from({ length: 300 }, (_, i) => ({ name: `C${i}`, position: 'FEU', rating: 50 }))
+    const { errors } = parsePackJson(json({ ...PACK, positions: {}, cards }))
+    expect(errors).toEqual([{ key: 'packError.positions', params: { max: 12 } }])
+  })
+
+  it('rejette un code de position trop long', () => {
+    const { errors } = parsePackJson(json({ ...PACK, positions: { TROPLONGCODE: 'x', EAU: 'Eau' } }))
+    expect(cles(errors)).toContain('packError.positionCode')
+  })
+
+  it('rejette un libellé de position vide', () => {
+    const { errors } = parsePackJson(json({ ...PACK, positions: { FEU: '  ', EAU: 'Eau' } }))
+    expect(cles(errors)).toContain('packError.positionLabel')
+  })
+
+  it('canonicalise les libellés de positions et les noms de cartes (trim)', () => {
+    const { pack } = parsePackJson(json({
+      ...PACK,
+      positions: { FEU: '  Feu  ', EAU: 'Eau' },
+      cards: [{ name: '  Dracaufeu  ', position: 'FEU', rating: 92 }, PACK.cards[1]],
+    }))
+    expect(pack?.positions.FEU).toBe('Feu')
+    expect(pack?.cards[0].name).toBe('Dracaufeu')
+  })
+
+  it('rejette une carte qui n’est pas un objet', () => {
+    const { errors } = parsePackJson(json({ ...PACK, cards: ['pas un objet', PACK.cards[1]] }))
+    expect(cles(errors)).toContain('packError.cardNotObject')
+    expect(errors[0].params?.index).toBe(0)
+  })
+
+  it('rejette une position de carte hors du vocabulaire', () => {
+    const cards = [{ name: 'X', position: 'SAN', rating: 50 }, PACK.cards[1]]
+    const { errors } = parsePackJson(json({ ...PACK, cards }))
+    expect(cles(errors)).toContain('packError.cardUnknownPosition')
+    expect(errors[0].params?.index).toBe(0)
+    expect(errors[0].params?.position).toBe('SAN')
   })
 
   it('rejette une note hors 1–99 ou non entière', () => {
     for (const rating of [0, 100, 91.5, '91']) {
-      const { errors } = parsePackJson(json({ ...PACK, cards: [{ ...CARTE, rating }] }), 'football')
-      expect(errors.some(e => e.includes('rating'))).toBe(true)
+      const cards = [{ ...PACK.cards[0], rating }, PACK.cards[1]]
+      expect(cles(parsePackJson(json({ ...PACK, cards })).errors)).toContain('packError.cardRating')
     }
   })
 
-  it('rejette un id non entier ou négatif', () => {
-    for (const id of [0, -1, 1.5, '1']) {
-      const { errors } = parsePackJson(json({ ...PACK, cards: [{ ...CARTE, id }] }), 'football')
-      expect(errors.some(e => e.includes('id'))).toBe(true)
-    }
+  it('rejette deux cartes de même nom', () => {
+    const cards = [PACK.cards[0], { ...PACK.cards[1], name: 'Dracaufeu' }]
+    expect(cles(parsePackJson(json({ ...PACK, cards })).errors)).toContain('packError.cardDuplicateName')
   })
 
-  it('rejette un name ou une position vide', () => {
-    for (const champ of ['name', 'position']) {
-      const { errors } = parsePackJson(json({ ...PACK, cards: [{ ...CARTE, [champ]: '  ' }] }), 'football')
-      expect(errors.some(e => e.includes(champ))).toBe(true)
-    }
-  })
-
-  it("rejette un id en doublon dans le même pack", () => {
-    const cards = [CARTE, { ...CARTE, name: 'Autre' }]
-    const { errors } = parsePackJson(json({ ...PACK, cards }), 'football')
-    expect(errors.some(e => e.includes('doublon'))).toBe(true)
+  it('rejette moins de 2 ou plus de 300 cartes', () => {
+    expect(cles(parsePackJson(json({ ...PACK, cards: [PACK.cards[0]] })).errors)).toContain('packError.cardsCount')
+    const trop = Array.from({ length: 301 }, (_, i) => ({ name: `C${i}`, position: 'FEU', rating: 50 }))
+    expect(cles(parsePackJson(json({ ...PACK, cards: trop })).errors)).toContain('packError.cardsCount')
   })
 
   it("situe l'erreur sur la bonne carte", () => {
-    const cards = [CARTE, { ...CARTE, id: 2, rating: 200 }]
-    const { errors } = parsePackJson(json({ ...PACK, cards }), 'football')
-    expect(errors.some(e => e.includes('carte[1]'))).toBe(true)
+    const cards = [PACK.cards[0], { ...PACK.cards[1], rating: 200 }]
+    const { errors } = parsePackJson(json({ ...PACK, cards }))
+    expect(errors[0].params?.index).toBe(1)
   })
 })
 
-describe('validatePacks', () => {
-  const naruto: Pack = {
-    slug: 'naruto', sortOrder: 2,
-    cards: [{ id: 1000, name: 'Naruto Uzumaki', position: 'NIN', rating: 92 }],
-  }
+describe('parseOfficialPackJson', () => {
+  const OFFICIEL = { ...PACK, slug: 'pokemon', sortOrder: 3 }
+
+  it('accepte un pack officiel valide', () => {
+    const { pack, errors } = parseOfficialPackJson(json(OFFICIEL), 'pokemon')
+    expect(errors).toEqual([])
+    expect(pack).toEqual(OFFICIEL)
+  })
+
+  it('rejette un slug différent du nom de fichier', () => {
+    const { errors } = parseOfficialPackJson(json(OFFICIEL), 'autre')
+    expect(cles(errors)).toContain('packError.slugMismatch')
+  })
+
+  it('distingue un slug manquant d’un slug différent', () => {
+    const { slug: _slug, ...sansSlug } = OFFICIEL
+    const { errors } = parseOfficialPackJson(json(sansSlug), 'pokemon')
+    expect(cles(errors)).toContain('packError.slugMissing')
+    expect(cles(errors)).not.toContain('packError.slugMismatch')
+  })
+
+  it('rejette un sortOrder non entier', () => {
+    const { errors } = parseOfficialPackJson(json({ ...OFFICIEL, sortOrder: 1.5 }), 'pokemon')
+    expect(cles(errors)).toContain('packError.sortOrder')
+  })
+})
+
+describe('validateOfficialPacks', () => {
+  const a: OfficialPack = { ...PACK, slug: 'a', sortOrder: 1 }
+  const b: OfficialPack = { ...PACK, slug: 'b', sortOrder: 2 }
 
   it('accepte des packs cohérents', () => {
-    expect(validatePacks([PACK, naruto])).toEqual([])
-  })
-
-  it('refuse un id réutilisé entre deux packs', () => {
-    const collision = { ...naruto, cards: [{ ...naruto.cards[0], id: 1 }] }
-    const errs = validatePacks([PACK, collision])
-    expect(errs.some(e => e.includes('1') && e.includes('doublon'))).toBe(true)
-  })
-
-  it('refuse deux packs de même slug', () => {
-    expect(validatePacks([PACK, { ...naruto, slug: 'football' }]).length).toBeGreaterThan(0)
+    expect(validateOfficialPacks([a, b])).toEqual([])
   })
 
   it('refuse deux packs de même sortOrder', () => {
-    expect(validatePacks([PACK, { ...naruto, sortOrder: 1 }]).length).toBeGreaterThan(0)
+    expect(cles(validateOfficialPacks([a, { ...b, sortOrder: 1 }]))).toContain('packError.duplicateSortOrder')
+  })
+
+  it('refuse deux packs de même slug', () => {
+    expect(cles(validateOfficialPacks([a, { ...b, slug: 'a' }]))).toContain('packError.duplicateSlug')
   })
 })
 
-const PACKS: Pack[] = [
-  { slug: 'football', sortOrder: 1, cards: [
-    { id: 1, name: 'Kylian Mbappé', position: 'ATT', rating: 91 },
-    { id: 2, name: "N'Golo Kanté", position: 'MID', rating: 85 },
-  ] },
-  { slug: 'naruto', sortOrder: 2, cards: [
-    { id: 1000, name: 'Naruto Uzumaki', position: 'NIN', rating: 92 },
-  ] },
-]
+describe('formatPackJson', () => {
+  it('produit un JSON relisible et reparsable', () => {
+    const texte = formatPackJson(PACK)
+    expect(texte).toContain('\n  "name"')
+    expect(parsePackJson(texte).pack).toEqual(PACK)
+  })
+})
 
-describe('upsertSql', () => {
-  const sql = upsertSql(PACKS)
+describe('installSql', () => {
+  const PACKS: OfficialPack[] = [
+    { ...PACK, slug: 'b', sortOrder: 2 },
+    { ...PACK, slug: 'a', sortOrder: 1 },
+  ]
+  const sql = installSql(PACKS)
 
-  it("insère les packs avant les cartes (contrainte de clé étrangère)", () => {
-    expect(sql.indexOf('insert into packs')).toBeLessThan(sql.indexOf('insert into cards'))
+  it('appelle install_official_pack une fois par pack', () => {
+    expect(sql.match(/install_official_pack/g)).toHaveLength(2)
   })
 
-  it("impose les ids malgré l'identity de cards.id", () => {
-    expect(sql).toContain('overriding system value')
+  it('trie les packs par sortOrder', () => {
+    // Position de l'argument slug de chaque appel, pas une recherche de "'a'"
+    // en texte libre : celle-ci ne tiendrait que parce que le JSON embarqué
+    // utilise des guillemets doubles et ne contient donc jamais "'a'".
+    const posA = sql.indexOf("$json$::jsonb, 'a',")
+    const posB = sql.indexOf("$json$::jsonb, 'b',")
+    expect(posA).toBeGreaterThan(-1)
+    expect(posB).toBeGreaterThan(-1)
+    expect(posA).toBeLessThan(posB)
   })
 
-  it("est additif : on conflict do update, jamais de delete", () => {
-    expect(sql).toContain('on conflict (slug) do update')
-    expect(sql).toContain('on conflict (id) do update')
-    expect(sql.toLowerCase()).not.toContain('delete')
-    expect(sql.toLowerCase()).not.toContain('truncate')
+  it("n'impose plus aucun id de carte", () => {
+    expect(sql).not.toContain('overriding system value')
+    expect(sql).not.toContain('setval')
   })
 
-  it("échappe les apostrophes des noms", () => {
-    expect(sql).toContain("'N''Golo Kanté'")
+  it('embarque un JSON reparsable', () => {
+    const bloc = sql.slice(sql.indexOf('$json$') + 6, sql.indexOf('$json$::jsonb'))
+    expect(JSON.parse(bloc).name).toBe('Pokémon Gen 1')
   })
 
-  it("rattache chaque carte à son pack", () => {
-    expect(sql).toContain("(1, 'Kylian Mbappé', 'ATT', 91, 'football')")
-    expect(sql).toContain("(1000, 'Naruto Uzumaki', 'NIN', 92, 'naruto')")
+  it('échappe une apostrophe dans le slug', () => {
+    const pack: OfficialPack = { ...PACK, slug: "l'a", sortOrder: 1 }
+    expect(installSql([pack])).toContain("'l''a'")
   })
 
-  it("resynchronise la séquence de cards.id", () => {
-    expect(sql).toContain("setval(pg_get_serial_sequence('cards', 'id')")
-  })
-
-  it("trie les packs par sortOrder et les cartes par id", () => {
-    const desordre = [PACKS[1], PACKS[0]]
-    expect(upsertSql(desordre)).toBe(sql)
+  it('refuse un pack dont le contenu contient le jeton $json$ réservé au dollar-quoting', () => {
+    const pack: OfficialPack = { ...PACK, description: 'Voir $json$ dans la doc.', slug: 'a', sortOrder: 1 }
+    expect(() => installSql([pack])).toThrow()
   })
 })
 
 describe('seedSql', () => {
+  const PACKS: OfficialPack[] = [{ ...PACK, slug: 'a', sortOrder: 1 }]
+
   it("préfixe un en-tête qui interdit l'édition manuelle", () => {
     const s = seedSql(PACKS)
     expect(s.startsWith('--')).toBe(true)
@@ -164,11 +251,11 @@ describe('seedSql', () => {
     expect(s).toContain('data/packs')
   })
 
-  it("contient exactement le SQL de upsertSql", () => {
-    expect(seedSql(PACKS)).toContain(upsertSql(PACKS))
+  it('contient exactement le SQL de installSql', () => {
+    expect(seedSql(PACKS)).toContain(installSql(PACKS))
   })
 
-  it("se termine par un saut de ligne", () => {
+  it('se termine par un saut de ligne', () => {
     expect(seedSql(PACKS).endsWith('\n')).toBe(true)
   })
 })
@@ -182,17 +269,17 @@ import { fileURLToPath } from 'node:url'
 const RACINE = fileURLToPath(new URL('../..', import.meta.url))
 const DOSSIER_PACKS = join(RACINE, 'data/packs')
 
-// Chargé une fois, réutilisé par le test de synchronisation de la tâche 5.
-function chargerVraisPacks(): { packs: Pack[]; errors: string[] } {
+function chargerVraisPacks(): { packs: OfficialPack[]; errors: PackError[] } {
   const fichiers = readdirSync(DOSSIER_PACKS).filter(f => f.endsWith('.json')).sort()
-  const packs: Pack[] = []
-  const errors: string[] = []
+  const packs: OfficialPack[] = []
+  const errors: PackError[] = []
   for (const f of fichiers) {
-    const { pack, errors: errs } = parsePackJson(readFileSync(join(DOSSIER_PACKS, f), 'utf8'), basename(f, '.json'))
+    const { pack, errors: errs } = parseOfficialPackJson(
+      readFileSync(join(DOSSIER_PACKS, f), 'utf8'), basename(f, '.json'))
     errors.push(...errs)
     if (pack) packs.push(pack)
   }
-  errors.push(...validatePacks(packs))
+  errors.push(...validateOfficialPacks(packs))
   return { packs, errors }
 }
 
@@ -203,19 +290,15 @@ describe('data/packs/*.json', () => {
     expect(errors).toEqual([])
   })
 
-  it('contiennent au moins le pack football', () => {
-    expect(packs.map(p => p.slug)).toContain('football')
+  it('contiennent football et naruto, 40 cartes chacun', () => {
+    expect(packs.map(p => p.slug).sort()).toEqual(['football', 'naruto'])
+    for (const p of packs) expect(p.cards).toHaveLength(40)
   })
 
-  it('football a bien ses 40 cartes historiques, ids 1 à 40', () => {
-    const football = packs.find(p => p.slug === 'football')
-    expect(football?.cards).toHaveLength(40)
-    expect(football?.cards.map(c => c.id)).toEqual(Array.from({ length: 40 }, (_, i) => i + 1))
-  })
-
-  it('respectent les plages d’ids par pack (football 1–999)', () => {
-    const football = packs.find(p => p.slug === 'football')
-    expect(football?.cards.every(c => c.id >= 1 && c.id <= 999)).toBe(true)
+  it('déclarent la position de chacune de leurs cartes', () => {
+    for (const p of packs) {
+      for (const c of p.cards) expect(Object.keys(p.positions)).toContain(c.position)
+    }
   })
 })
 

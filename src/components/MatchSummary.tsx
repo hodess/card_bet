@@ -32,7 +32,7 @@ export default function MatchSummary({ gameId }: { gameId: string }) {
       const { data, error } = await supabase.from('matches')
         .select(`finished_at,
           match_players(seat, nickname, score, money_left, result, is_bot, profile:profiles(username)),
-          match_cards(seat, price_paid, card:cards(*))`)
+          match_cards(seat, price_paid, card_id, card_name, card_position, card_rating)`)
         .eq('game_id', gameId)
         .maybeSingle()
       if (!alive) return
@@ -52,7 +52,12 @@ export default function MatchSummary({ gameId }: { gameId: string }) {
           cards: (data.match_cards ?? []).map(c => ({
             seat: c.seat,
             price: c.price_paid,
-            card: c.card as unknown as SummaryCard['card'],
+            card: {
+              id: c.card_id,
+              name: c.card_name,
+              position: c.card_position,
+              rating: c.card_rating,
+            },
           })),
         })
       }
@@ -83,6 +88,12 @@ export default function MatchSummary({ gameId }: { gameId: string }) {
   }
 
   const winner = summary.players.find(p => p.result === 'win')
+  // Une partie terminée verse toujours au moins une carte (deck_size >= 1) :
+  // si `cards` est globalement vide, ce n'est jamais un tirage légitime, c'est
+  // la RLS de match_cards qui masque le pack privé de cette partie — y compris
+  // pour un joueur anonyme de cette partie même, dont match_players.profile_id
+  // est nul et que la policy rejette donc aussi.
+  const deckPrive = summary.cards.length === 0
 
   return (
     <main className="page">
@@ -99,13 +110,16 @@ export default function MatchSummary({ gameId }: { gameId: string }) {
             {' '}{t('common.scoreLine', { score: p.score })}{' '}
             <small>{t('common.moneyLeft', { money: p.moneyLeft })}</small>
           </h2>
-          <div className="mini-cards">
-            {summary.cards.filter(c => c.seat === p.seat).map(c => (
-              <Card key={`${c.seat}-${c.card.id}`} card={c.card} size="mini" price={c.price} />
-            ))}
-          </div>
+          {!deckPrive && (
+            <div className="mini-cards">
+              {summary.cards.filter(c => c.seat === p.seat).map(c => (
+                <Card key={`${c.seat}-${c.card.id}`} card={c.card} size="mini" price={c.price} />
+              ))}
+            </div>
+          )}
         </section>
       ))}
+      {deckPrive && <p className="hint">{t('history.deckPrivate')}</p>}
       <p className="hint">
         {t('summary.playedOn', { date: new Date(summary.finishedAt).toLocaleDateString(locale()) })}
       </p>

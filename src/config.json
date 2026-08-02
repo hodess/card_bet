@@ -27,6 +27,14 @@
     "joinTimeoutMs": 5000,
     "names": ["Bot Zizou", "Bot Bielsa", "Bot Pep", "Bot Arsène"]
   },
+  "packs": {
+    "maxPerUser": 20,
+    "nameMaxLength": 40,
+    "descriptionMaxLength": 200,
+    "emojiMaxLength": 8,
+    "positions": { "max": 12, "codeMaxLength": 6, "labelMaxLength": 30 },
+    "cards": { "min": 2, "max": 300, "nameMaxLength": 40, "ratingMin": 1, "ratingMax": 99 }
+  },
   "ui": {
     "historyPageSize": 20,
     "historyBatchSize": 20,
@@ -34,6 +42,7 @@
     "searchDebounceMs": 250,
     "boardPollMs": 3000,
     "lobbyPollMs": 3000,
+    "packEditorDebounceMs": 300,
     "auction": {
       "revealMs": 380,
       "soldMs": 950,

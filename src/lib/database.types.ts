@@ -112,6 +112,7 @@ export type Database = {
           pack: string
           position: string
           rating: number
+          retired: boolean
         }
         Insert: {
           id?: never
@@ -119,6 +120,7 @@ export type Database = {
           pack?: string
           position: string
           rating: number
+          retired?: boolean
         }
         Update: {
           id?: never
@@ -126,6 +128,7 @@ export type Database = {
           pack?: string
           position?: string
           rating?: number
+          retired?: boolean
         }
         Relationships: [
           {
@@ -272,30 +275,32 @@ export type Database = {
       match_cards: {
         Row: {
           card_id: number
+          card_name: string
+          card_position: string
+          card_rating: number
           match_id: string
           price_paid: number
           seat: number
         }
         Insert: {
           card_id: number
+          card_name: string
+          card_position: string
+          card_rating: number
           match_id: string
           price_paid: number
           seat: number
         }
         Update: {
           card_id?: number
+          card_name?: string
+          card_position?: string
+          card_rating?: number
           match_id?: string
           price_paid?: number
           seat?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "match_cards_card_id_fkey"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "cards"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "match_cards_match_id_fkey"
             columns: ["match_id"]
@@ -359,6 +364,7 @@ export type Database = {
           finished_at: string
           game_id: string | null
           id: string
+          private_pack: boolean
           start_bankroll: number
         }
         Insert: {
@@ -366,6 +372,7 @@ export type Database = {
           finished_at?: string
           game_id?: string | null
           id?: string
+          private_pack?: boolean
           start_bankroll: number
         }
         Update: {
@@ -373,24 +380,57 @@ export type Database = {
           finished_at?: string
           game_id?: string | null
           id?: string
+          private_pack?: boolean
           start_bankroll?: number
         }
         Relationships: []
       }
       packs: {
         Row: {
+          created_at: string
+          deleted_at: string | null
+          description: string
+          emoji: string
+          name: string
+          owner_id: string | null
+          positions: Json
           slug: string
-          sort_order: number
+          sort_order: number | null
+          visibility: string
         }
         Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          description?: string
+          emoji?: string
+          name: string
+          owner_id?: string | null
+          positions?: Json
           slug: string
-          sort_order: number
+          sort_order?: number | null
+          visibility?: string
         }
         Update: {
+          created_at?: string
+          deleted_at?: string | null
+          description?: string
+          emoji?: string
+          name?: string
+          owner_id?: string | null
+          positions?: Json
           slug?: string
-          sort_order?: number
+          sort_order?: number | null
+          visibility?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "packs_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_cards: {
         Row: {
@@ -517,6 +557,7 @@ export type Database = {
         Returns: Json
       }
       deck_count: { Args: { p_id: string }; Returns: number }
+      delete_pack: { Args: { p_slug: string }; Returns: undefined }
       effective_nickname: {
         Args: { typed: string; uid: string }
         Returns: string
@@ -524,6 +565,10 @@ export type Database = {
       get_profile_stats: { Args: { p_username: string }; Returns: Json }
       get_server_time: { Args: never; Returns: string }
       has_challenger: { Args: { p_auction_id: string }; Returns: boolean }
+      install_official_pack: {
+        Args: { p: Json; p_slug: string; p_sort_order: number }
+        Returns: undefined
+      }
       is_player: { Args: { g_id: string }; Returns: boolean }
       join_game: {
         Args: { game_code: string; nickname: string; p_is_bot?: boolean }
@@ -539,6 +584,7 @@ export type Database = {
       }
       list_packs: { Args: never; Returns: Json }
       list_public_games: { Args: never; Returns: Json }
+      may_host_pack: { Args: { p_slug: string; uid: string }; Returns: boolean }
       open_next_auction: {
         Args: { g_id: string; p_grace?: boolean }
         Returns: undefined
@@ -546,9 +592,23 @@ export type Database = {
       pass_auction: { Args: { g_id: string }; Returns: undefined }
       place_bid: { Args: { amount: number; g_id: string }; Returns: undefined }
       profile_id_of: { Args: { p_username: string }; Returns: string }
+      purge_retired_cards: { Args: never; Returns: undefined }
       rematch_game: { Args: { old_game_id: string }; Returns: Json }
       remove_friendship: { Args: { p_username: string }; Returns: undefined }
+      replace_pack_cards: {
+        Args: { p: Json; p_slug: string }
+        Returns: undefined
+      }
+      save_pack: {
+        Args: { p_payload: Json; p_slug: string; p_visibility?: string }
+        Returns: Json
+      }
       send_friend_request: { Args: { p_username: string }; Returns: undefined }
+      set_pack_visibility: {
+        Args: { p_slug: string; p_visibility: string }
+        Returns: undefined
+      }
+      slugify: { Args: { p: string }; Returns: string }
       start_game: { Args: { g_id: string }; Returns: undefined }
       update_game_settings: {
         Args: {
@@ -563,6 +623,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      validate_pack_payload: { Args: { p: Json }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
