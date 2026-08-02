@@ -1,5 +1,6 @@
 import config from '../config.json'
 import { useT } from '../hooks/useT'
+import type { PackSummary } from '../lib/packsApi'
 
 export type GameSettings = {
   deckSize: number
@@ -23,13 +24,16 @@ const FIELDS: (keyof typeof LIMITS)[] = [
 export default function GameSettingsFields({ value, onChange, packs, disabled = false }: {
   value: GameSettings
   onChange: (next: GameSettings) => void
-  packs: string[]
+  packs: PackSummary[]
   disabled?: boolean
 }) {
   const { t } = useT()
-  // Liste vide (chargement en cours ou échec) : on garde au moins le pack courant
-  // comme option, sinon le <select> s'afficherait vide alors qu'un pack est choisi.
-  const options = packs.length > 0 ? packs : [value.pack]
+  // Liste vide (chargement en cours ou échec) : on garde au moins le pack
+  // courant comme option, sinon le <select> s'afficherait vide alors qu'un pack
+  // est choisi. Son nom est inconnu à ce stade : on retombe sur le slug.
+  const options = packs.length > 0
+    ? packs.map(p => ({ slug: p.slug, label: `${p.emoji} ${p.name}`.trim() }))
+    : [{ slug: value.pack, label: value.pack }]
   return (
     <div className="settings-grid">
       {FIELDS.map(key => (
@@ -51,8 +55,8 @@ export default function GameSettingsFields({ value, onChange, packs, disabled = 
           disabled={disabled || options.length <= 1}
           onChange={e => onChange({ ...value, pack: e.target.value })}
         >
-          {options.map(slug => (
-            <option key={slug} value={slug}>{t(`packs.${slug}.name`)}</option>
+          {options.map(o => (
+            <option key={o.slug} value={o.slug}>{o.label}</option>
           ))}
         </select>
       </label>

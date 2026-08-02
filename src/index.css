@@ -474,3 +474,25 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
   /* On garde l'information « qui mène » (l'échelle) sans la transition */
   .seat { transition: none; }
 }
+
+/* ----- V1.4 : page des packs ----- */
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.page-head h1 { margin: 0; text-align: left; }
+.pack-section { margin-top: 1.6rem; }
+.pack-section h2 { font-size: 1.1rem; color: var(--muted); margin-bottom: 0.6rem; }
+.pack-cell { display: flex; flex-direction: column; gap: 0.4rem; }
+.pack-emoji { font-size: 1.2em; }
+.pack-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+.position-legend-title { color: var(--muted); }
+.btn-link {
+  background: var(--accent); color: var(--bg); border-radius: 12px;
+  padding: 0.5rem 0.9rem; font-size: 0.9rem; font-weight: 700;
+  text-decoration: none; white-space: nowrap;
+}
+.btn-ghost {
+  background: transparent; color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; padding: 0.25rem 0.6rem; font-size: 0.78rem; font-weight: 500;
+  cursor: pointer; text-decoration: none; white-space: nowrap;
+}
+.btn-ghost:hover { border-color: var(--accent); }
+.btn-ghost.danger:hover { border-color: var(--danger); color: var(--danger); }

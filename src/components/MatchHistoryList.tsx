@@ -127,11 +127,17 @@ export default function MatchHistoryList({ profileId }: { profileId: string }) {
                 : t('history.lineSolo', { score: r.score, money: r.moneyLeft, date })}
             </span>
             {decks[r.matchId] && (
-              <div className="mini-cards">
-                {decks[r.matchId].map(c => (
-                  <Card key={`${c.seat}-${c.card.id}`} card={c.card} size="mini" price={c.price_paid} />
-                ))}
-              </div>
+              decks[r.matchId].length > 0 ? (
+                <div className="mini-cards">
+                  {decks[r.matchId].map(c => (
+                    <Card key={`${c.seat}-${c.card.id}`} card={c.card} size="mini" price={c.price_paid} />
+                  ))}
+                </div>
+              ) : (
+                // Pack privé de la partie : la RLS de match_cards ne renvoie rien à
+                // qui n'y a pas joué. Sans ce message, le panneau s'ouvrirait vide.
+                <p className="hint">{t('history.deckPrivate')}</p>
+              )
             )}
           </div>
           <button className="secondary" onClick={() => toggleDeck(r.matchId)}>

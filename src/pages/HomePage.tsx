@@ -111,7 +111,7 @@ export default function HomePage() {
           <h2>{t('home.publicSettingsTitle')}</h2>
           <p className="hint">{t('home.publicSettingsHint')}</p>
           <GameSettingsFields value={settings} onChange={setSettings}
-            packs={packs.map(p => p.slug)} />
+            packs={packs} />
           {/* échec de list_packs : le sélecteur retombe en lecture seule sans ce message */}
           {packsError && <p className="error">{packsError}</p>}
           <button onClick={() => createGame('public')} disabled={noNick}>{t('home.publish')}</button>
@@ -148,7 +148,7 @@ export default function HomePage() {
                   delay: g.close_delay_seconds,
                 })}
               </span>
-              <span className="hint">{t(`packs.${g.pack}.name`)}</span>
+              <span className="hint">{packs.find(p => p.slug === g.pack)?.name ?? g.pack}</span>
             </div>
             <button onClick={() => joinPublic(g.game_id)} disabled={noNick}>{t('home.join')}</button>
           </div>
