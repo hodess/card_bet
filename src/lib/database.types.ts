@@ -554,6 +554,7 @@ export type Database = {
         Returns: Json
       }
       deck_count: { Args: { p_id: string }; Returns: number }
+      delete_pack: { Args: { p_slug: string }; Returns: undefined }
       effective_nickname: {
         Args: { typed: string; uid: string }
         Returns: string
@@ -593,7 +594,15 @@ export type Database = {
         Args: { p: Json; p_slug: string }
         Returns: undefined
       }
+      save_pack: {
+        Args: { p_payload: Json; p_slug: string; p_visibility?: string }
+        Returns: Json
+      }
       send_friend_request: { Args: { p_username: string }; Returns: undefined }
+      set_pack_visibility: {
+        Args: { p_slug: string; p_visibility: string }
+        Returns: undefined
+      }
       slugify: { Args: { p: string }; Returns: string }
       start_game: { Args: { g_id: string }; Returns: undefined }
       update_game_settings: {

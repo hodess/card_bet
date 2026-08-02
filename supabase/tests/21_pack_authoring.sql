@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(35);
 
 create function test_signup(uid uuid, anon boolean default false) returns void
 language plpgsql as $$
@@ -90,6 +90,116 @@ select install_official_pack(payload(), 'pokemon', 3);
 select is(
   (select count(*)::int from cards where pack = 'pokemon' and retired), 1,
   'la carte retenue par une partie en cours survit en retired');
+
+-- ---------- packs de joueurs ----------
+select test_signup('00000000-0000-0000-0000-000000000001');
+select claim_username('Hodess');
+select test_signup('00000000-0000-0000-0000-000000000002');
+select claim_username('Autre');
+
+-- 18-20. création
+select test_signup('00000000-0000-0000-0000-000000000001');
+create temp table p1 as select save_pack(null, payload(), 'private')->>'slug' as slug;
+select is((select slug from p1), 'hodess~pokemon-gen-1',
+  'le slug est namespacé par le pseudo');
+select is((select owner_id from packs where slug = (select slug from p1)),
+  '00000000-0000-0000-0000-000000000001'::uuid, 'l''auteur est enregistré');
+select is((select count(*)::int from cards where pack = (select slug from p1) and not retired), 2,
+  'les cartes du pack sont insérées');
+
+-- 21. p_visibility explicitement NULL (pas seulement absent) : `NULL not in (...)`
+-- s'évalue à NULL, pas à vrai, et laisserait passer une contrainte de colonne
+-- brute sans ce garde-fou.
+select throws_ok(
+  $$select save_pack(null, payload(), null)$$,
+  'P0001', 'INVALID_SETTINGS', 'save_pack refuse une visibilité explicitement NULL');
+
+-- 22. collision de slug : suffixe numérique
+create temp table p2 as select save_pack(null, payload(), 'public')->>'slug' as slug;
+select is((select slug from p2), 'hodess~pokemon-gen-1-2',
+  'un second pack de même nom est suffixé');
+
+-- 23-24. mise à jour par le propriétaire, refus pour un tiers
+select lives_ok(
+  format($$select save_pack(%L, payload('{"name": "Pokémon renommé"}'), 'private')$$,
+    (select slug from p1)),
+  'le propriétaire met son pack à jour');
+select is((select name from packs where slug = (select slug from p1)), 'Pokémon renommé',
+  'le nouveau nom est enregistré, le slug ne bouge pas');
+
+-- 25. un tiers ne peut pas écrire dans le pack d'un autre
+select test_signup('00000000-0000-0000-0000-000000000002');
+select throws_ok(
+  format($$select save_pack(%L, payload(), 'public')$$, (select slug from p1)),
+  'P0001', 'NOT_PACK_OWNER', 'un tiers ne peut pas modifier le pack d''un autre');
+
+-- 26. même garde sur set_pack_visibility, jusqu'ici non couverte
+select throws_ok(
+  format($$select set_pack_visibility(%L, 'public')$$, (select slug from p1)),
+  'P0001', 'NOT_PACK_OWNER', 'un tiers ne peut pas changer la visibilité du pack d''un autre');
+
+-- 27. même garde sur delete_pack, jusqu'ici non couverte
+select throws_ok(
+  format($$select delete_pack(%L)$$, (select slug from p1)),
+  'P0001', 'NOT_PACK_OWNER', 'un tiers ne peut pas supprimer le pack d''un autre');
+
+-- 28. payload invalide refusé même si le client l'a laissé passer
+select test_signup('00000000-0000-0000-0000-000000000001');
+select throws_ok(
+  $$select save_pack(null, payload('{"cards": [{"name":"A","position":"NOPE","rating":50},{"name":"B","position":"FEU","rating":50}]}'), 'public')$$,
+  'P0001', 'INVALID_PACK', 'le serveur revalide le payload');
+
+-- 29. quota
+insert into packs (slug, owner_id, name, positions, visibility)
+select 'hodess~bourrage-' || i, '00000000-0000-0000-0000-000000000001',
+       'Bourrage ' || i, '{"X":"X"}'::jsonb, 'private'
+from generate_series(1, 18) i;
+select throws_ok(
+  $$select save_pack(null, payload('{"name": "De trop"}'), 'private')$$,
+  'P0001', 'TOO_MANY_PACKS', 'le quota de packs par compte est appliqué');
+delete from packs where slug like 'hodess~bourrage-%';
+
+-- 30. set_pack_visibility refuse aussi une visibilité explicitement NULL
+select throws_ok(
+  format($$select set_pack_visibility(%L, null)$$, (select slug from p1)),
+  'P0001', 'INVALID_SETTINGS', 'set_pack_visibility refuse une visibilité explicitement NULL');
+
+-- 31. bascule de visibilité
+select set_pack_visibility((select slug from p1), 'public');
+select is((select visibility from packs where slug = (select slug from p1)), 'public',
+  'la visibilité bascule sans re-sauver le JSON');
+
+-- 32. suppression logique
+select delete_pack((select slug from p1));
+select ok((select deleted_at is not null from packs where slug = (select slug from p1)),
+  'delete_pack pose deleted_at au lieu de supprimer la ligne');
+
+-- 33. le rattrapage de collision fonctionne même quand le while exists voit une
+-- ligne posée directement en base (simule la fenêtre de course entre lecture
+-- et écriture d'un double-clic) : on obtient un slug suffixé, jamais une erreur
+-- brute de contrainte unique.
+insert into packs (slug, owner_id, name, positions, visibility)
+values ('hodess~pack-de-course', '00000000-0000-0000-0000-000000000001',
+        'Pack de course', '{"X":"X"}'::jsonb, 'private');
+create temp table p4 as
+  select save_pack(null, payload('{"name": "Pack de course"}'), 'private')->>'slug' as slug;
+select isnt((select slug from p4), 'hodess~pack-de-course',
+  'une collision de slug déjà en base est rattrapée par un suffixe, pas par une erreur');
+
+-- 34. list_packs : les officiels, les publics et les miens ; pas ceux des autres
+select test_signup('00000000-0000-0000-0000-000000000002');
+create temp table p3 as select save_pack(null, payload('{"name": "Secret"}'), 'private')->>'slug' as slug;
+select test_signup('00000000-0000-0000-0000-000000000001');
+select is(
+  (select count(*)::int from json_array_elements(list_packs()) e
+   where e->>'slug' = (select slug from p3)),
+  0, 'le pack privé d''un autre n''apparaît pas dans list_packs');
+
+-- 35. et, positivement, les officiels et le pack public de l'appelant y sont bien
+select is(
+  (select count(*)::int from json_array_elements(list_packs()) e
+   where e->>'slug' in ('football', 'naruto', (select slug from p2))),
+  3, 'les packs officiels et le pack public de l''appelant apparaissent dans list_packs');
 
 select * from finish();
 rollback;
