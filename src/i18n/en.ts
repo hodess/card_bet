@@ -51,6 +51,10 @@ export const en: Record<string, string> = {
   'packs.by': 'by {name}',
   'packs.public': 'Public',
   'packs.private': 'Private',
+  // ACTION labels for the toggle button (PacksPage): showing the current
+  // state would be misleading since the click does the opposite of it.
+  'packs.makePrivate': 'Make private',
+  'packs.makePublic': 'Make public',
   'packs.edit': 'Edit',
   'packs.delete': 'Delete',
   'packs.deleteConfirm': 'Delete "{name}"? Games in progress are not interrupted.',
@@ -72,6 +76,15 @@ export const en: Record<string, string> = {
   'editor.needAccount': 'to make a pack.',
   'editor.loadErrorTitle': 'Couldn’t load this pack',
   'editor.retry': 'Retry',
+  // Content of the prefilled sample (PackEditorPage): interface copy, not
+  // data — a demo pack has no reference language.
+  'editor.sample.name': 'My pack',
+  'editor.sample.emoji': '🃏',
+  'editor.sample.description': 'Two cards to get started.',
+  'editor.sample.position1': 'First position',
+  'editor.sample.position2': 'Second position',
+  'editor.sample.card1': 'First card',
+  'editor.sample.card2': 'Second card',
 
   // --- recherche de joueurs ---
   'search.title': 'Find a player',
@@ -266,7 +279,7 @@ export const en: Record<string, string> = {
   'packError.cardName': 'Card {index}: name is required, at most {max} characters.',
   'packError.cardDuplicateName': 'Card {index}: "{name}" appears twice.',
   'packError.cardUnknownPosition': 'Card {index}: position "{position}" is not in positions.',
-  'packError.cardRating': 'Card {index}: rating must be an integer between 1 and 99.',
+  'packError.cardRating': 'Card {index}: rating must be an integer between {min} and {max}.',
   'packError.slugMissing': 'Missing slug — expected "{file}".',
   'packError.slugMismatch': 'slug "{slug}" ≠ file name "{file}".',
   'packError.sortOrder': 'sortOrder must be an integer greater than 0.',

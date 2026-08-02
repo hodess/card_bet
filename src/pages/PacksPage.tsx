@@ -37,7 +37,7 @@ export default function PacksPage() {
       </Link>
       <button className="btn-ghost" onClick={() => agir(() =>
         setPackVisibility(p.slug, p.visibility === 'public' ? 'private' : 'public'))}>
-        {p.visibility === 'public' ? t('packs.public') : t('packs.private')}
+        {p.visibility === 'public' ? t('packs.makePrivate') : t('packs.makePublic')}
       </button>
       <button className="btn-ghost danger" onClick={() => {
         if (confirm(t('packs.deleteConfirm', { name: p.name }))) agir(() => deletePack(p.slug))

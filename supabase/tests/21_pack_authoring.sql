@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(46);
+select plan(48);
 
 create function test_signup(uid uuid, anon boolean default false) returns void
 language plpgsql as $$
@@ -92,6 +92,14 @@ select is(
   'la carte retenue par une partie en cours survit en retired');
 
 -- ---------- packs de joueurs ----------
+
+-- 17b. un compte anonyme n'a pas de pseudo stable, donc pas de namespace de
+-- slug possible : save_pack refuse avec NICKNAME_REQUIRED, comme create_game.
+select test_signup('00000000-0000-0000-0000-000000000010', true);
+select throws_ok(
+  $$select save_pack(null, payload(), 'private')$$,
+  'P0001', 'NICKNAME_REQUIRED', 'save_pack refuse un compte anonyme sans pseudo');
+
 select test_signup('00000000-0000-0000-0000-000000000001');
 select claim_username('Hodess');
 select test_signup('00000000-0000-0000-0000-000000000002');
@@ -224,12 +232,14 @@ select is((select count(*)::int from cards where pack = 'autre~secret'), 2,
   'l''auteur voit les cartes de son pack privé');
 reset role;
 
--- 39. un pack privé d'autrui est refusé à la création de partie
+-- 39. un pack privé d'autrui est invisible à la création de partie : UNKNOWN_PACK,
+-- pas PACK_NOT_OWNED_BY_HOST, sans quoi un tiers distinguerait un slug inconnu
+-- d'un pack privé existant et confirmerait ainsi son existence.
 select test_signup('00000000-0000-0000-0000-000000000001');
 select throws_ok(
   $$select create_game('Hodess', null, null, null, null, null, 'private', 2, 'autre~secret')$$,
-  'P0001', 'PACK_NOT_OWNED_BY_HOST',
-  'on ne peut pas héberger une partie dans le pack privé d''un autre');
+  'P0001', 'UNKNOWN_PACK',
+  'le pack privé d''un autre est indistinguable d''un slug inconnu à la création de partie');
 
 -- 40. l'auteur peut, lui
 select test_signup('00000000-0000-0000-0000-000000000002');
@@ -273,6 +283,13 @@ select test_signup('00000000-0000-0000-0000-000000000001');
 set local role authenticated;
 select is((select count(*)::int from cards where pack = 'autre~secret'), 2,
   'un co-joueur d''une partie en cours sur pack privé voit les cartes de ce pack');
+-- même amendement, jamais asserté côté packs : la clause co-joueur de
+-- packs_read ne conditionne pas non plus la ligne `packs` elle-même à
+-- deleted_at is null — l'auteur pourrait la retrouver invisible ailleurs
+-- (packs_read, première clause), mais un co-joueur d'une partie vivante la
+-- voit encore.
+select is((select count(*)::int from packs where slug = 'autre~secret'), 1,
+  'un co-joueur d''une partie en cours voit la ligne packs d''un pack privé supprimé');
 reset role;
 
 -- 44. la branche positive de rematch_game, jusqu'ici non couverte : une

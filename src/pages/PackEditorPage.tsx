@@ -9,15 +9,20 @@ import { formatPackJson, parsePackJson, type PackInput } from '../lib/packs'
 import { getPack, listPackCards, savePack } from '../lib/packsApi'
 import { errorMessage } from '../lib/errors'
 
-const EXEMPLE: PackInput = {
-  name: 'Mon pack',
-  emoji: '🃏',
-  description: 'Deux cartes pour démarrer.',
-  positions: { A: 'Première position', B: 'Seconde position' },
-  cards: [
-    { name: 'Première carte', position: 'A', rating: 80 },
-    { name: 'Seconde carte', position: 'B', rating: 70 },
-  ],
+// Contenu de l'exemple prérempli : de la copie d'interface, donc sous t() —
+// un pack de démonstration n'a pas de langue de référence, contrairement à un
+// vrai pack (nom, positions, cartes : des données saisies par son auteur).
+function exemplePack(t: (key: string) => string): PackInput {
+  return {
+    name: t('editor.sample.name'),
+    emoji: t('editor.sample.emoji'),
+    description: t('editor.sample.description'),
+    positions: { A: t('editor.sample.position1'), B: t('editor.sample.position2') },
+    cards: [
+      { name: t('editor.sample.card1'), position: 'A', rating: 80 },
+      { name: t('editor.sample.card2'), position: 'B', rating: 70 },
+    ],
+  }
 }
 
 export default function PackEditorPage() {
@@ -33,7 +38,7 @@ export default function PackEditorPage() {
   const profileId = profile?.id ?? null
   const fichier = useRef<HTMLInputElement>(null)
 
-  const [text, setText] = useState(() => formatPackJson(EXEMPLE))
+  const [text, setText] = useState(() => formatPackJson(exemplePack(t)))
   const [differe, setDiffere] = useState(text)
   const [visibility, setVisibility] = useState<'public' | 'private'>('private')
   const [chargement, setChargement] = useState(Boolean(slug))
@@ -231,7 +236,7 @@ export default function PackEditorPage() {
           <input ref={fichier} type="file" accept="application/json,.json"
                  style={{ display: 'none' }}
                  onChange={e => { const f = e.target.files?.[0]; if (f) importer(f) }} />
-          <button className="btn-ghost" onClick={() => setText(formatPackJson(EXEMPLE))}>
+          <button className="btn-ghost" onClick={() => setText(formatPackJson(exemplePack(t)))}>
             {t('editor.starter')}
           </button>
           <button className="btn-ghost" onClick={() => fichier.current?.click()}>

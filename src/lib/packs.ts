@@ -118,7 +118,11 @@ function corps(brut: Record<string, unknown>, errors: PackError[]): PackInput | 
     }
     if (!Number.isInteger(c.rating)
         || (c.rating as number) < L.cards.ratingMin || (c.rating as number) > L.cards.ratingMax) {
-      errors.push({ key: 'packError.cardRating', params: { index } }); valide = false
+      errors.push({
+        key: 'packError.cardRating',
+        params: { index, min: L.cards.ratingMin, max: L.cards.ratingMax },
+      })
+      valide = false
     }
     if (!valide) return
     vus.add(n)

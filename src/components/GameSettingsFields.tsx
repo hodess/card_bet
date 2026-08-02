@@ -28,12 +28,17 @@ export default function GameSettingsFields({ value, onChange, packs, disabled = 
   disabled?: boolean
 }) {
   const { t } = useT()
-  // Liste vide (chargement en cours ou échec) : on garde au moins le pack
-  // courant comme option, sinon le <select> s'afficherait vide alors qu'un pack
-  // est choisi. Son nom est inconnu à ce stade : on retombe sur le slug.
-  const options = packs.length > 0
-    ? packs.map(p => ({ slug: p.slug, label: `${p.emoji} ${p.name}`.trim() }))
-    : [{ slug: value.pack, label: value.pack }]
+  // Le pack courant reste toujours parmi les options, même absent de la
+  // liste : liste vide (chargement en cours ou échec), mais aussi pack qui a
+  // disparu de list_packs (supprimé ou privatisé) pendant que l'hôte est sur
+  // l'écran de réglages. Sans ça le <select> retomberait silencieusement sur
+  // la première option alors que value.pack, lui, n'a pas changé. Son nom est
+  // inconnu dans ce cas : on retombe sur le slug, faute de mieux.
+  const connu = packs.some(p => p.slug === value.pack)
+  const options = [
+    ...packs.map(p => ({ slug: p.slug, label: `${p.emoji} ${p.name}`.trim() })),
+    ...(connu ? [] : [{ slug: value.pack, label: value.pack }]),
+  ]
   return (
     <div className="settings-grid">
       {FIELDS.map(key => (

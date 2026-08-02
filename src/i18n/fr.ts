@@ -52,6 +52,10 @@ export const fr: Record<string, string> = {
   'packs.by': 'par {name}',
   'packs.public': 'Public',
   'packs.private': 'Privé',
+  // Libellés d'ACTION du bouton de bascule (PacksPage) : l'état affiché serait
+  // trompeur puisque le clic fait l'inverse de ce qu'il montrerait.
+  'packs.makePrivate': 'Rendre privé',
+  'packs.makePublic': 'Rendre public',
   'packs.edit': 'Éditer',
   'packs.delete': 'Supprimer',
   'packs.deleteConfirm': 'Supprimer « {name} » ? Les parties en cours ne sont pas interrompues.',
@@ -73,6 +77,15 @@ export const fr: Record<string, string> = {
   'editor.needAccount': 'pour créer un pack.',
   'editor.loadErrorTitle': 'Impossible de charger ce pack',
   'editor.retry': 'Réessayer',
+  // Contenu de l'exemple prérempli (PackEditorPage) : de la copie d'interface,
+  // pas une donnée — un pack de démonstration n'a pas de langue de référence.
+  'editor.sample.name': 'Mon pack',
+  'editor.sample.emoji': '🃏',
+  'editor.sample.description': 'Deux cartes pour démarrer.',
+  'editor.sample.position1': 'Première position',
+  'editor.sample.position2': 'Seconde position',
+  'editor.sample.card1': 'Première carte',
+  'editor.sample.card2': 'Seconde carte',
 
   // --- recherche de joueurs ---
   'search.title': 'Trouver un joueur',
@@ -267,7 +280,7 @@ export const fr: Record<string, string> = {
   'packError.cardName': 'Carte {index} : nom obligatoire, au plus {max} caractères.',
   'packError.cardDuplicateName': 'Carte {index} : « {name} » apparaît deux fois.',
   'packError.cardUnknownPosition': 'Carte {index} : position « {position} » absente de positions.',
-  'packError.cardRating': 'Carte {index} : la note doit être un entier entre 1 et 99.',
+  'packError.cardRating': 'Carte {index} : la note doit être un entier entre {min} et {max}.',
   'packError.slugMissing': 'slug manquant — attendu « {file} ».',
   'packError.slugMismatch': 'slug « {slug} » ≠ nom de fichier « {file} ».',
   'packError.sortOrder': 'sortOrder doit être un entier supérieur à 0.',

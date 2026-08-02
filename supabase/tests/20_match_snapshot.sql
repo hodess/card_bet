@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(6);
+select plan(8);
 
 create function test_signup(uid uuid, anon boolean default false) returns void
 language plpgsql as $$
@@ -57,6 +57,26 @@ delete from game_cards where card_id = (select id from carte);
 select lives_ok(
   format($$delete from cards where id = %L$$, (select id from carte)),
   'une carte citée par l''historique peut être supprimée');
+
+-- 7-8. le chemin POSITIF de match_cards_read, jusqu'ici jamais couvert : un
+-- tiers voit bien le snapshot d'une partie jouée sur pack officiel (ici
+-- 'jetable', sans owner_id, comme un pack officiel), et record_match y écrit
+-- private_pack = false. La policy est fail-closed : une erreur de service ici
+-- masquerait tout l'historique du jeu sans qu'aucun test ne le remarque.
+-- On retrouve le match par matches_read (`using (true)`, ouverte à tout
+-- authenticated), jamais par games (RLS restrictive, is_player) ni par une
+-- table temporaire (inaccessible sous `set local role`) : seul match de cette
+-- transaction, `limit 1` est sans ambiguïté.
+select is(
+  (select private_pack from matches limit 1),
+  false, 'record_match écrit private_pack = false pour une partie jouée sur pack officiel');
+
+select test_signup('00000000-0000-0000-0000-000000000003');
+set local role authenticated;
+select is(
+  (select count(*)::int from match_cards where match_id = (select id from matches limit 1)),
+  1, 'un tiers voit le snapshot d''une partie jouée sur pack officiel');
+reset role;
 
 select * from finish();
 rollback;
