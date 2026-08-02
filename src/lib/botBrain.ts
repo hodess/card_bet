@@ -9,7 +9,7 @@ import type { Temperament } from './botNames'
 const PAS_SURENCHERE = config.game.ui.increments[0]
 
 export type BotLevel = 'easy' | 'medium' | 'hard'
-export type Selectivity = 'fixed' | 'ratio'
+export type Selectivity = 'pack' | 'pool'
 
 // Fraction des notes strictement inférieures. Un pool vide rend 1 : s'il ne reste
 // rien à tirer, la carte devant nous est par définition la meilleure disponible.
@@ -38,39 +38,45 @@ function ramp(q: number, seuil: number): number {
 
 // u ∈ [0, 1] : à quel point la carte mérite qu'on ouvre le portefeuille.
 //
-// Propriété du jeu à garder en tête : les bankrolls sont égales et il se vend
-// exactement T = N × S cartes, donc le budget par carte vendue vaut bankroll / S
-// QUEL QUE SOIT le nombre de joueurs. Le niveau de prix d'équilibre ne dépend
-// donc presque pas de N. `ratio` sur-réagit au nombre de joueurs, ce qui est la
-// faiblesse voulue du niveau moyen.
+// Deux modes seulement : `pack` juge sur le pack entier (le facile, qui ne compte
+// pas les cartes sorties et croit encore qu'un 84 est médiocre en fin de partie),
+// `pool` juge sur ce qui reste à tirer. Apport mesuré de cette distinction : 1 à
+// 2 points de taux de victoire. Faible, mais dans le bon sens, et surtout lisible
+// pour le joueur — c'est une erreur humaine reconnaissable.
 //
-// Un troisième mode a existé ici : `hypergeometric`, l'espérance hypergéométrique
-// du nombre de cartes meilleures qui allaient encore sortir, censé donner au
-// difficile une lecture plus juste de l'état de la partie que `ratio`. Mesuré par
-// mutation, il n'apportait rien : router le difficile vers `ratio` (ce fichier)
-// donne un meilleur taux de victoire face au moyen (0,740 contre 0,717), et même
-// le router vers `fixed` laissait les 232 tests verts. La force du difficile vient
-// de son plancher de dépense adaptatif, de sa mémoire des prix et de son faible
-// bruit — pas de cette formule. Retiré faute d'apport démontré ; ne pas le
-// réinventer sans nouvelle mesure qui le justifie.
+// DEUX MODES ONT ÉTÉ ESSAYÉS PUIS RETIRÉS, ne pas les réinventer sans mesure :
+//
+// - `hypergeometric`, l'espérance du nombre de cartes meilleures encore à sortir.
+//   Router le difficile vers un mode plus simple donnait un MEILLEUR taux.
+// - `table`, qui adaptait le seuil d'exigence au nombre de tirages restants
+//   (`1 − S/T`), c'est-à-dire au nombre de joueurs. C'était la demande initiale du
+//   chantier, et le banc l'a réfutée : le difficile tombait de 0,656 à 0,538 face
+//   au moyen à 4 joueurs, et de 0,658 à 0,512 à 8 joueurs. La raison tient au jeu
+//   lui-même — on ne peut pas réserver ses slots, il FAUT les remplir, donc devenir
+//   plus exigeant parce que la table est grande revient à se faire souffler les
+//   bonnes cartes puis à ramasser les rebuts.
+//
+// Ce qui adapte réellement le bot à l'état de la partie, c'est `budgetUtile / S`
+// (la part par slot monte à mesure que le deck se remplit) et la composition du
+// pool restant — pas un seuil indexé sur le nombre de joueurs.
 export function selectivity(input: {
   mode: Selectivity
   rating: number
   pool: number[]
   packRatings: number[]
-  slotsMissing: number        // S
-  totalSlotsMissing: number   // T — aussi le nombre de cartes encore à tirer
   fixedThreshold: number
 }): number {
-  const { mode, rating, pool, packRatings, slotsMissing: S, totalSlotsMissing: T } = input
+  const { mode, rating, pool, packRatings } = input
 
-  // Facile : il juge sur le pack ENTIER, sans compter les cartes déjà sorties. Bêtise
-  // réaliste — en fin de partie il croit encore qu'un 84 est médiocre alors que c'est
-  // devenu la meilleure carte disponible, et il la laisse filer.
-  if (mode === 'fixed') return ramp(percentile(packRatings, rating), input.fixedThreshold)
+  // Facile : juge sur le pack ENTIER, sans compter les cartes déjà sorties. Après
+  // dix cartes il croit encore qu'un 84 est médiocre, alors que c'est devenu la
+  // meilleure carte disponible. Il laisse filer les bonnes cartes de fin de partie.
+  if (mode === 'pack') return ramp(percentile(packRatings, rating), input.fixedThreshold)
 
-  // Moyen (et difficile) : seuil adaptatif, fiable mais faux quand la table se remplit.
-  return ramp(percentile(pool, rating), T > 0 ? 1 - S / T : 0)
+  // Moyen et difficile : ils comptent les cartes, donc jugent sur le pool restant.
+  // Ce qui les sépare n'est pas ce raisonnement mais sa PRÉCISION — bruit, fautes,
+  // plancher de dépense, lecture des adversaires, mémoire des prix.
+  return ramp(percentile(pool, rating), input.fixedThreshold)
 }
 
 // Le plafond théorique, en euros. `budgetUtile / S` est la part d'argent
@@ -151,8 +157,6 @@ function theoreticalFor(view: BotView, rating: number): number {
     rating,
     pool: view.pool,
     packRatings: view.packRatings,
-    slotsMissing: view.slotsMissing,
-    totalSlotsMissing: view.totalSlotsMissing,
     fixedThreshold: level.fixedThreshold,
   })
   // Plancher de dépense : la part du budget par slot que le bot engage même sur une
@@ -161,13 +165,17 @@ function theoreticalFor(view: BotView, rating: number): number {
   // la règle de réserve garantissant déjà qu'il complétera son deck. Le banc d'essai
   // a mesuré 0,07 contre 0,93 pour quatre bots difficiles sans plancher face à
   // quatre faciles.
-  // Le difficile module ce plancher par S / T : plus la table est grande, moins il
-  // gaspille sur les cartes qu'il ne vise pas, et plus il garde pour celles qu'il a
-  // identifiées. Le banc d'essai a validé ce sens et réfuté l'inverse.
-  const echelle = level.spendFloorAdapts && view.totalSlotsMissing > 0
-    ? view.slotsMissing / view.totalSlotsMissing
-    : 1
-  const plancher = level.spendFloor * echelle
+  //
+  // Le plancher seul ne suffit pas à faire dépenser : il faut aussi un κ élevé et
+  // un γ de 1, sans quoi les cartes moyennes sont écrasées et les bots terminent
+  // avec la moitié de leur bankroll. Une partie réelle à 4 joueurs a montré des
+  // bots gardant 519 à 697 € sur 1000, et un humain raflant un 89 pour 230 €.
+  //
+  // Une variante modulait ce plancher par S / T pour le niveau difficile. Retirée :
+  // à 4 joueurs elle le ramenait à 0,07, le rendait muet, et il gagnait alors par
+  // l'auto-complétion — en laissant les autres remplir leur deck pour ramasser les
+  // dernières cartes à la mise minimale. Gagner en se taisant n'est pas jouer.
+  const plancher = level.spendFloor
   const uPlancher = plancher + (1 - plancher) * u
   return ceiling({
     bankroll: view.bankroll,

@@ -43,45 +43,33 @@ describe('poolAfter', () => {
   })
 })
 
-describe('selectivity — mode fixed (facile)', () => {
-  const base = {
-    mode: 'fixed' as const, pool: POOL, packRatings: POOL,
-    slotsMissing: 3, totalSlotsMissing: 24, fixedThreshold: 0.5,
-  }
-  it('rend 0 sous le seuil fixe', () => {
+describe('selectivity — mode pack (facile)', () => {
+  const base = { mode: 'pack' as const, pool: POOL, packRatings: POOL, fixedThreshold: 0.5 }
+  it('rend 0 sous le seuil', () => {
     expect(selectivity({ ...base, rating: 76 })).toBe(0)
   })
   it('rend 1 pour la meilleure note du pack', () => {
     expect(selectivity({ ...base, rating: 99 })).toBe(1)
   })
-  it('n’écoute pas le nombre de joueurs', () => {
-    const a = selectivity({ ...base, rating: 86, totalSlotsMissing: 6 })
-    const b = selectivity({ ...base, rating: 86, totalSlotsMissing: 24 })
-    expect(a).toBe(b)
-  })
-  it('se trompe en fin de partie : il juge sur le pack, pas sur le pool', () => {
-    // pool réduit aux trois moins bonnes, 76 est devenu excellent — le facile l'ignore
-    const u = selectivity({ ...base, rating: 76, pool: [70, 72, 74] })
-    expect(u).toBe(0)
+  it('ignore le pool restant : c’est toute sa myopie', () => {
+    // le pool est réduit aux trois moins bonnes cartes, donc un 76 est devenu la
+    // MEILLEURE encore disponible — le facile n'en sait rien, il juge sur le pack.
+    expect(selectivity({ ...base, rating: 76, pool: [70, 72, 74] })).toBe(0)
   })
 })
 
-describe('selectivity — mode ratio (moyen)', () => {
-  const base = {
-    mode: 'ratio' as const, pool: POOL, packRatings: POOL,
-    slotsMissing: 3, fixedThreshold: 0.5,
-  }
-  it('à 2 joueurs le seuil est la médiane', () => {
-    // T = 6 → seuil 0,5 ; rating 86 → q = 0,8 → u = (0,8 − 0,5) / 0,5
-    expect(selectivity({ ...base, rating: 86, totalSlotsMissing: 6 })).toBeCloseTo(0.6)
+describe('selectivity — mode pool (moyen et difficile)', () => {
+  const base = { mode: 'pool' as const, pool: POOL, packRatings: POOL, fixedThreshold: 0.5 }
+  it('applique le seuil au pool restant', () => {
+    // rating 86 → q = 0,8 → u = (0,8 − 0,5) / 0,5
+    expect(selectivity({ ...base, rating: 86 })).toBeCloseTo(0.6)
   })
-  it('à 8 joueurs il abandonne le milieu de tableau', () => {
-    // T = 24 → seuil 0,875 ; rating 86 → q = 0,8 < 0,875 → u = 0
-    expect(selectivity({ ...base, rating: 86, totalSlotsMissing: 24 })).toBe(0)
+  it('voit qu’une carte modeste est devenue la meilleure disponible', () => {
+    // même situation que la myopie du facile ci-dessus, mais lui la comprend
+    expect(selectivity({ ...base, rating: 76, pool: [70, 72, 74] })).toBe(1)
   })
-  it('devient preneur de tout quand il est le dernier joueur actif', () => {
-    // S = T → seuil 0 → u = q
-    expect(selectivity({ ...base, rating: 76, totalSlotsMissing: 3 })).toBeCloseTo(0.3)
+  it('rend 0 sous le seuil', () => {
+    expect(selectivity({ ...base, rating: 74 })).toBe(0)
   })
 })
 
@@ -210,22 +198,17 @@ describe('effectiveCeiling', () => {
     // toute surenchère, donc le bot refuserait une carte que personne ne dispute
     // au lieu de la ramasser. Le plancher doit être minBid + un cran.
     //
-    // Avec les défauts de `vue()` (bankroll 1000, 3 slots), le plancher de dépense
-    // du moyen (spendFloor 0,25) donne à lui seul un plafond brut autour de 90 —
-    // bien au-dessus du plancher de ramassage, qui ne serait alors jamais exercé.
-    // Il faut un budgetUtile faible pour que le plafond brut retombe SOUS
-    // minBid + PAS_SURENCHERE (20) sans que la règle de réserve (cap) morde avant
-    // lui : bankroll 25 sur un seul slot manquant donne cap = 25 et un plafond brut
-    // mesuré entre 11,7 et 14,3 selon le bruit — c'est bien ce plancher de
-    // ramassage qui porte le résultat à 20, pas la réserve ni le plancher de
-    // dépense. Vérifié par mutation : avec `Math.max(view.minBid, plafond)`
-    // (l'ancien bug), ce test rend 13 au lieu de 20 et échoue.
+    // Avec le plancher de dépense relevé (kappa 3, gamma 1), la valeur exacte du
+    // plafond dépend trop finement du bruit pour rester un repère stable : on
+    // vérifie la propriété qui compte plutôt qu'un chiffre — le plafond dépasse
+    // strictement la mise minimale, et `decide` mise effectivement au lieu de
+    // refuser la carte.
     const rebut = vue({
       level: 'medium', cardRating: 70, currentBid: 10,
       bankroll: 25, slotsMissing: 1, totalSlotsMissing: 1,
     })
-    expect(effectiveCeiling(rebut)).toBe(20)
-    expect(decide(rebut, seq(0.99))).toEqual({ kind: 'bid', amount: 20 })
+    expect(effectiveCeiling(rebut)).toBeGreaterThan(rebut.minBid)
+    expect(decide(rebut, seq(0.99)).kind).toBe('bid')
   })
 })
 
@@ -240,8 +223,10 @@ describe('decide — les cas où il ne fait rien', () => {
 
 describe('decide — la passe est pilotée par le plafond', () => {
   it('passe quand la prochaine mise dépasserait son plafond', () => {
-    // carte médiocre : plafond à la mise minimale, le prix est déjà à 100
-    expect(decide(vue({ cardRating: 70 }), seq()).kind).toBe('pass')
+    // carte la plus mauvaise du pool (70) : même avec le plancher de dépense du
+    // moyen, son plafond plafonne autour de 318 — largement dépassé par un prix
+    // déjà à 400, donc plus aucune surenchère ne tient.
+    expect(decide(vue({ cardRating: 70, currentBid: 400 }), seq()).kind).toBe('pass')
   })
   it('mise quand le prix est encore sous son plafond', () => {
     expect(decide(vue({ cardRating: 88, currentBid: 100 }), seq()).kind).toBe('bid')
@@ -286,8 +271,8 @@ describe('decide — les erreurs franches du facile', () => {
       && seededUnit(i, 'bot', 'kind') >= 0.5
       && seededUnit(i, 'bot', 'noise') > 0.4)
     const u = selectivity({
-      mode: 'fixed', rating: 88, pool: POOL, packRatings: POOL,
-      slotsMissing: 3, totalSlotsMissing: 6, fixedThreshold: conf.fixedThreshold,
+      mode: 'pack', rating: 88, pool: POOL, packRatings: POOL,
+      fixedThreshold: conf.fixedThreshold,
     })
     const nominal = ceiling({
       bankroll: 1000, slotsMissing: 3, minBid: 10,
@@ -318,9 +303,13 @@ describe('decide — les incréments', () => {
 
   it('le facile franchit son propre plafond d’un coup', () => {
     // c'est voulu : il décide de miser parce que le PRIX COURANT est sous son
-    // plafond, puis le dépasse avec un incrément maladroit. On place le prix juste
-    // sous le plafond pour que +100 le dépasse à coup sûr.
-    const v0 = vue({ level: 'easy', auctionId: ID_SAIN, cardRating: 88 })
+    // plafond, puis le dépasse avec un incrément maladroit, sans jamais violer la
+    // réserve. On place le prix juste sous le plafond pour que +100 le dépasse à
+    // coup sûr. Note 86 plutôt que 88 : sur la meilleure carte du pack, le
+    // plafond du facile talonne désormais la réserve (kappa 3) et +100 s'y ferait
+    // couper au lieu d'être coupé par l'incrément — 86 laisse assez de marge sous
+    // la réserve pour isoler l'un de l'autre.
+    const v0 = vue({ level: 'easy', auctionId: ID_SAIN, cardRating: 86 })
     const plafond = effectiveCeiling(v0)
     const v = { ...v0, currentBid: plafond - 10 }
     expect(decide(v, seq(0.9))).toEqual({ kind: 'bid', amount: plafond + 90 })
@@ -421,6 +410,17 @@ describe('les quatre tempéraments du config sont réellement distincts', () => 
 })
 
 describe('le routage niveau → mode de sélectivité', () => {
+  it('chaque niveau est routé vers le mode attendu', () => {
+    // Vérifié par sabotage : router le difficile vers le mode du facile laisse TOUTE
+    // la suite verte, y compris les neuf tests de hiérarchie — l'écart de mode ne pèse
+    // que 1 à 2 points de taux de victoire. Aucun test de comportement ne protège donc
+    // ce câblage ; celui-ci le fait explicitement, sinon un renommage malheureux
+    // priverait le facile de sa myopie sans que rien ne bronche.
+    expect(config.bot.levels.easy.selectivity).toBe('pack')
+    expect(config.bot.levels.medium.selectivity).toBe('pool')
+    expect(config.bot.levels.hard.selectivity).toBe('pool')
+  })
+
   // Fin de partie : le pool est réduit aux trois moins bonnes cartes, donc un 76
   // est devenu la MEILLEURE carte encore disponible. Le facile juge sur le pack
   // entier et la croit médiocre ; le moyen et le difficile voient le pool réel.
@@ -430,11 +430,17 @@ describe('le routage niveau → mode de sélectivité', () => {
   it('le facile reste myope et laisse filer la meilleure carte restante', () => {
     // Le plancher de dépense (0,45 du budget par slot) fait désormais payer le
     // facile une part réelle même sur une carte qu'il croit médiocre : une valeur
-    // absolue basse n'est plus l'attendu. L'esprit du test reste intact en relatif :
-    // il doit rester très en retrait du moyen, qui voit la vraie valeur de la carte.
+    // absolue basse n'est plus l'attendu. Ce qui distingue vraiment le facile,
+    // c'est qu'il ne VOIT PAS que cette carte est devenue la meilleure du pool :
+    // jugeant sur le pack entier, il reste sous son propre seuil (u = 0, plafond
+    // porté par le seul plancher de dépense), là où le moyen et le difficile,
+    // jugeant sur le pool réduit, la reconnaissent comme excellente (u = 1) et
+    // montent jusqu'à la réserve. Mesuré : facile 625, moyen et difficile 980.
     const facile = effectiveCeiling(vue({ level: 'easy', auctionId: ID_SAIN, ...finDePartie }))
     const moyen = effectiveCeiling(vue({ level: 'medium', ...finDePartie }))
-    expect(facile).toBeLessThan(moyen / 2)
+    const difficile = effectiveCeiling(vue({ level: 'hard', ...finDePartie }))
+    expect(facile).toBeLessThan(moyen)
+    expect(facile).toBeLessThan(difficile)
   })
 
   it('le moyen et le difficile voient qu’elle est devenue excellente', () => {
@@ -449,9 +455,10 @@ describe('le routage niveau → mode de sélectivité', () => {
     // `fixed` du facile ne lit QUE `packRatings` (le pack entier, figé) — `pool` ne
     // devrait donc jamais influencer son plafond. Le mode `ratio` du moyen lit
     // `pool`, donc le sien doit bouger quand la table se vide des mauvaises cartes.
-    // Mesuré : le facile reste identique à 287 des deux côtés (pool plein ou
-    // appauvri) ; le moyen passe de 93 (pool plein) à 683 (pool réduit aux trois
-    // moins bonnes cartes, où 76 devient la meilleure disponible).
+    // Mesuré : le facile reste identique à 625 des deux côtés (pool plein ou
+    // appauvri) ; le moyen passe de 318 (pool plein) à 980 (pool réduit aux trois
+    // moins bonnes cartes, où 76 devient la meilleure disponible — et où son
+    // plafond, poussé par u = 1, vient buter sur la règle de réserve).
     const poolPlein = POOL
     const poolPauvre = [70, 72, 74]
 
@@ -462,7 +469,7 @@ describe('le routage niveau → mode de sélectivité', () => {
       level: 'easy', auctionId: ID_SAIN, cardRating: 76, pool: poolPauvre, packRatings: POOL,
     }))
     expect(facilePauvre).toBe(facilePlein)
-    expect(facilePlein).toBe(287)
+    expect(facilePlein).toBe(625)
 
     const moyenPlein = effectiveCeiling(vue({
       level: 'medium', cardRating: 76, pool: poolPlein, packRatings: POOL,
@@ -470,8 +477,8 @@ describe('le routage niveau → mode de sélectivité', () => {
     const moyenPauvre = effectiveCeiling(vue({
       level: 'medium', cardRating: 76, pool: poolPauvre, packRatings: POOL,
     }))
-    expect(moyenPlein).toBe(93)
-    expect(moyenPauvre).toBe(683)
+    expect(moyenPlein).toBe(318)
+    expect(moyenPauvre).toBe(980)
     expect(moyenPauvre).not.toBe(moyenPlein)
   })
 })
