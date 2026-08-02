@@ -45,6 +45,13 @@ Ton écran affiche 60             Son écran affiche 60, son timer 4 s repart
   `last_bid_at + 4 s` à l'horloge de Postgres, peu importe ce que prétend le client.
 - La clé `anon` embarquée dans le front est **publique par design** : elle ne donne que
   les droits définis par la RLS, c'est-à-dire quasiment rien en direct.
+- La policy `cards_read` d'un pack privé ne s'ouvre qu'à son auteur **ou** aux
+  joueurs d'une partie qui l'utilise (`games.pack`) : le temps d'une partie, un
+  invité voit les cartes sans que le pack devienne public pour autant.
+- `match_cards` (l'historique détaillé) reste fermée aux non-joueurs quand la
+  partie s'est jouée sur un pack privé, via `matches.private_pack` — un
+  booléen figé à l'enregistrement, pas une jointure vers `games` (qui disparaît
+  à 24 h et rendrait la policy passante après la purge).
 
 ---
 
@@ -90,7 +97,10 @@ npx supabase migration new create_game_schema   # crée supabase/migrations/<ts>
 npx supabase db reset    # rejoue TOUTES les migrations + seed.sql en local (destructif, local seulement)
 ```
 
-Le seed des ~40 cartes Football va dans `supabase/seed.sql`.
+Le seed des packs officiels (Football, Naruto — 80 cartes à eux deux) va dans
+`supabase/seed.sql`, sous forme d'appels
+`select install_official_pack($json$ … $json$::jsonb, '<slug>', <ordre>);`
+un par pack complet (nom, emoji, description, vocabulaire de positions, cartes).
 
 Realtime s'active table par table, dans une migration :
 
@@ -110,10 +120,11 @@ npx supabase db push --include-seed             # applique les migrations locale
 ```
 
 `seed.sql` est un fichier **généré** (`npm run cards:seed`, ne jamais l'éditer à la
-main) qui upsert les cartes (`on conflict (id) do update`) : il est idempotent, le
-rejouer ne duplique rien. En production, ce sont les migrations générées par
-`npm run cards:migration` qui portent les cartes ; `--include-seed` ne sert donc
-qu'à amorcer un environnement neuf.
+main). Les cartes n'ont plus d'id stable : l'idempotence vient du `on conflict
+(slug) do update` sur `packs` et du remplacement intégral du jeu de cartes par
+`replace_pack_cards` — rejouer le seed ne duplique rien. En production, ce sont
+les migrations générées par `npm run cards:migration` qui portent les packs ;
+`--include-seed` ne sert donc qu'à amorcer un environnement neuf.
 
 ### e. Générer les types TypeScript
 
@@ -135,6 +146,20 @@ npx supabase test db
 
 C'est là que se vérifient la règle de réserve, l'idempotence de `close_auction`, les
 mises concurrentes, l'auto-complétion et le calcul du classement.
+
+### g. Le ménage automatique (pg_cron)
+
+Trois jobs tournent en prod, tous portés par des migrations — aucune étape
+manuelle n'est requise :
+
+| Job | Horaire | Rôle |
+|---|---|---|
+| `purge-old-games` | 4 h 00 | Supprime les parties de plus de 24 h |
+| `purge-retired-cards` | 4 h 15 | Supprime les cartes retirées (`cards.retired`) et les packs supprimés (`packs.deleted_at`) que plus aucune partie ne référence |
+| `purge-anonymous-users` | 4 h 30 | Supprime les comptes anonymes de plus de 30 jours |
+
+Vérifier qu'ils sont bien programmés : `select * from cron.job;` (Table Editor
+ou `psql` sur le pooler).
 
 ---
 
@@ -183,6 +208,14 @@ vert requis.
   cloud ; le cloud n'évolue que par `db push` de nouvelles migrations.
 - Les **clés locales et cloud sont différentes** : si le front affiche des erreurs 401,
   vérifie que `.env.local` pointe bien sur l'environnement que tu crois.
+- **Supprimer un compte ayant créé un pack échoue.** `packs.owner_id` est
+  `references profiles(id) on delete cascade`, mais la cascade bute toujours
+  sur `cards_pack_fkey` (un pack a au moins deux cartes) : le `delete` remonte
+  une erreur de contrainte. Non atteignable aujourd'hui (un compte anonyme ne
+  peut pas posséder de pack, et `purge-anonymous-users` ne vise que les
+  anonymes), mais si le besoin se présente : appeler `delete_pack` sur chacun
+  de ses packs, attendre que `purge-retired-cards` les efface, puis seulement
+  supprimer le compte.
 
 ---
 

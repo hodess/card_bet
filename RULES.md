@@ -78,7 +78,11 @@ Conséquences :
 - **Auto-complétion** : quand il ne reste qu'un seul joueur avec un deck incomplet, ses
   slots restants sont remplis automatiquement avec les cartes suivantes à la mise
   minimale, et le classement s'affiche immédiatement.
-- La partie et toutes ses données sont **temporaires** : tout est supprimé après la fin.
+- La partie elle-même est **temporaire** : tout est supprimé après la fin, sauf
+  pour les joueurs connectés à un compte, dont l'historique (résumé, deck
+  final avec le nom et la note de chaque carte achetée) est conservé
+  **définitivement**. Si la partie s'est jouée sur un pack privé, ce détail
+  reste réservé aux joueurs de la partie.
 
 ## 6. Score et départage
 
@@ -101,6 +105,20 @@ la partie et l'argent restant au départage.
   suivant dans la rotation.
 - Si tous les joueurs éligibles refusent (ou ne peuvent pas miser), la carte est
   **défaussée** et la carte suivante apparaît.
+
+## 8. Les packs de cartes
+
+- Le pack se choisit à la **création** de la partie, et peut être changé dans
+  le **salon** tant que la partie n'a pas démarré.
+- Un pack compte de **2 à 300 cartes**.
+- Un joueur peut créer son propre pack et le garder **privé** ou le
+  **publier**. Un pack privé n'est jouable que par son auteur, et seulement en
+  tant qu'**hôte** — les autres joueurs de la partie en voient les cartes le
+  temps de la partie, sans pouvoir l'héberger eux-mêmes. Si quelqu'un d'autre
+  que l'auteur relance une **revanche** après une partie jouée sur ce pack,
+  la revanche repart sur le pack par défaut.
+- Éditer ou supprimer un pack n'interrompt **jamais** une partie en cours,
+  mais empêche un salon de **démarrer** s'il pointe encore vers ce pack.
 
 ---
 
@@ -132,8 +150,8 @@ Périmètre volontairement minimal : valider le système de mise temps réel de 
 - **Joker** (section 7).
 - **2 à 8 joueurs** par partie.
 - **Taille de deck configurable** (3 à 5) dans les paramètres du lobby.
-- **Plusieurs packs de base** : Football, Basket, Animés… Le pack est choisi à la
-  création de la partie.
+- **Plusieurs packs de base** : Football, Naruto… Le pack est choisi à la
+  création de la partie, et modifiable dans le salon.
 - Parties **publiques** avec matchmaking simple, en plus des parties privées.
 - Paramètres de lobby exposés : bankroll, mise minimale, taille de deck, pack.
 
@@ -152,4 +170,3 @@ Périmètre volontairement minimal : valider le système de mise temps réel de 
 - Notes masquées aux ranks élevés (`show_ratings` par partie) : la connaissance des
   cartes devient un skill à part entière.
 - Cartes multi-statistiques et modes de duel (statistique aléatoire, moyenne, catégorie).
-- Création et partage de packs par la communauté.
