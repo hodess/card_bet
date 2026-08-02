@@ -34,12 +34,18 @@ jobs:
           BASE: ${{ github.base_ref }}
       - name: Partir de l'état de la branche de base
         run: |
+          # Vider AVANT de restaurer : `git checkout <ref> -- <chemin>` ajoute les
+          # fichiers de la référence sans retirer ceux qu'elle ne connaît pas. Sans
+          # ce nettoyage, une migration renommée par la PR serait présente sous ses
+          # DEUX noms et s'appliquerait deux fois.
+          rm -rf supabase/migrations
           git checkout "origin/$BASE" -- supabase/migrations
           supabase start
         env:
           BASE: ${{ github.base_ref }}
       - name: Appliquer les nouvelles migrations par-dessus, comme le fait la prod
         run: |
+          rm -rf supabase/migrations
           git checkout HEAD -- supabase/migrations
           # Renommer ou supprimer une migration déjà appliquée est indétectable
           # d'ici : la base garde la trace de l'ancien nom. Ça n'arrive qu'en
