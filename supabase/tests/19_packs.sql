@@ -11,7 +11,7 @@ end $$;
 
 -- Un pack minuscule, créé dans la transaction du test : il prouve que les
 -- comptages sont bien par pack et non globaux (3 cartes ici, 83 en tout).
-insert into packs (slug, sort_order) values ('mini', 99);
+insert into packs (slug, sort_order, name) values ('mini', 99, 'Mini');
 insert into cards (name, position, rating, pack) values
   ('Mini Un', 'NIN', 80, 'mini'),
   ('Mini Deux', 'NIN', 70, 'mini'),

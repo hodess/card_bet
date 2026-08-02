@@ -112,6 +112,7 @@ export type Database = {
           pack: string
           position: string
           rating: number
+          retired: boolean
         }
         Insert: {
           id?: never
@@ -119,6 +120,7 @@ export type Database = {
           pack?: string
           position: string
           rating: number
+          retired?: boolean
         }
         Update: {
           id?: never
@@ -126,6 +128,7 @@ export type Database = {
           pack?: string
           position?: string
           rating?: number
+          retired?: boolean
         }
         Relationships: [
           {
@@ -381,18 +384,50 @@ export type Database = {
       }
       packs: {
         Row: {
+          created_at: string
+          deleted_at: string | null
+          description: string
+          emoji: string
+          name: string
+          owner_id: string | null
+          positions: Json
           slug: string
-          sort_order: number
+          sort_order: number | null
+          visibility: string
         }
         Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          description?: string
+          emoji?: string
+          name: string
+          owner_id?: string | null
+          positions?: Json
           slug: string
-          sort_order: number
+          sort_order?: number | null
+          visibility?: string
         }
         Update: {
+          created_at?: string
+          deleted_at?: string | null
+          description?: string
+          emoji?: string
+          name?: string
+          owner_id?: string | null
+          positions?: Json
           slug?: string
-          sort_order?: number
+          sort_order?: number | null
+          visibility?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "packs_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_cards: {
         Row: {

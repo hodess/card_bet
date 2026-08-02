@@ -16,8 +16,7 @@ select test_signup('00000000-0000-0000-0000-000000000001');
 select claim_username('Alice');
 
 -- un pack jetable, pour pouvoir le réécrire sans toucher au seed.
--- packs.name n'existe qu'à partir de la tâche 2, qui reprendra cette ligne.
-insert into packs (slug, sort_order) values ('jetable', 98);
+insert into packs (slug, sort_order, name) values ('jetable', 98, 'Jetable');
 insert into cards (name, position, rating, pack) values
   ('Avant', 'NIN', 70, 'jetable'),
   ('Autre', 'NIN', 60, 'jetable');
