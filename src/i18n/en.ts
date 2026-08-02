@@ -42,10 +42,6 @@ export const en: Record<string, string> = {
   'packs.summary': '{count} cards · ratings {min}–{max}',
   'packs.cardCount': '{count} cards',
   'packs.notFound': 'Pack not found',
-  'packs.football.name': 'Football',
-  'packs.football.description': 'The stars of the beautiful game.',
-  'packs.naruto.name': 'Naruto',
-  'packs.naruto.description': 'Ninja from Konoha and beyond.',
 
   // --- recherche de joueurs ---
   'search.title': 'Find a player',
@@ -217,4 +213,27 @@ export const en: Record<string, string> = {
   'errors.emailAlreadyRegistered': 'This email is already linked to an account — sign in instead.',
   'errors.invalidCredentials': 'Wrong email or password.',
   'errors.passwordTooShort': 'Password too short (6 characters minimum).',
+
+  // --- erreurs de validation d'un pack (src/lib/packs.ts) ---
+  'packError.json': 'Invalid JSON: {message}',
+  'packError.rootNotObject': 'The root of the file must be an object.',
+  'packError.unknownField': 'Unknown field "{field}".',
+  'packError.name': 'Name is required and must be at most {max} characters.',
+  'packError.emoji': 'Emoji must be at most {max} characters.',
+  'packError.description': 'Description must be at most {max} characters.',
+  'packError.positions': 'You need between 1 and {max} positions.',
+  'packError.positionCode': 'Code "{code}" must be at most {max} characters.',
+  'packError.positionLabel': 'Label for "{code}" is required and must be at most {max} characters.',
+  'packError.cardsCount': 'You need between {min} and {max} cards.',
+  'packError.cardNotObject': 'Card {index}: must be an object.',
+  'packError.cardUnknownField': 'Card {index}: unknown field "{field}".',
+  'packError.cardName': 'Card {index}: name is required, at most {max} characters.',
+  'packError.cardDuplicateName': 'Card {index}: "{name}" appears twice.',
+  'packError.cardUnknownPosition': 'Card {index}: position "{position}" is not in positions.',
+  'packError.cardRating': 'Card {index}: rating must be an integer between 1 and 99.',
+  'packError.slugMissing': 'Missing slug — expected "{file}".',
+  'packError.slugMismatch': 'slug "{slug}" ≠ file name "{file}".',
+  'packError.sortOrder': 'sortOrder must be an integer greater than 0.',
+  'packError.duplicateSlug': 'Slug "{slug}" is duplicated.',
+  'packError.duplicateSortOrder': 'sortOrder of "{slug}" is already taken by "{other}".',
 }

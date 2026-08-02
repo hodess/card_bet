@@ -5,30 +5,43 @@
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { parsePackJson, seedSql, upsertSql, validatePacks, type Pack } from '../src/lib/packs.ts'
+import { fr } from '../src/i18n/fr.ts'
+import { interpolate } from '../src/i18n/format.ts'
+import {
+  installSql, parseOfficialPackJson, seedSql, validateOfficialPacks,
+  type OfficialPack, type PackError,
+} from '../src/lib/packs.ts'
 
 const RACINE = fileURLToPath(new URL('..', import.meta.url))
 const DOSSIER_PACKS = join(RACINE, 'data/packs')
 const SEED = join(RACINE, 'supabase/seed.sql')
 const MIGRATIONS = join(RACINE, 'supabase/migrations')
 
-function charger(): Pack[] {
+// Le dictionnaire français directement, pas le singleton i18n : ce CLI est un
+// outil de dev français, et le singleton importerait src/i18n/index.ts, qui
+// référence `document` — indésirable dans le projet TypeScript des scripts.
+const rendre = (e: PackError) => interpolate(fr[e.key] ?? e.key, e.params)
+
+function charger(): OfficialPack[] {
   const fichiers = readdirSync(DOSSIER_PACKS).filter(f => f.endsWith('.json')).sort()
   if (fichiers.length === 0) {
     console.error(`Aucun fichier de pack dans ${DOSSIER_PACKS}`)
     process.exit(1)
   }
-  const packs: Pack[] = []
-  const errors: string[] = []
+  const packs: OfficialPack[] = []
+  // le fichier est porté à côté de l'erreur, pas dedans : les messages sont
+  // partagés avec l'éditeur, qui n'a pas de notion de fichier
+  const errors: [fichier: string, erreur: PackError][] = []
   for (const f of fichiers) {
-    const { pack, errors: errs } = parsePackJson(readFileSync(join(DOSSIER_PACKS, f), 'utf8'), basename(f, '.json'))
-    errors.push(...errs)
+    const { pack, errors: errs } = parseOfficialPackJson(
+      readFileSync(join(DOSSIER_PACKS, f), 'utf8'), basename(f, '.json'))
+    for (const e of errs) errors.push([f, e])
     if (pack) packs.push(pack)
   }
-  errors.push(...validatePacks(packs))
+  for (const e of validateOfficialPacks(packs)) errors.push(['data/packs', e])
   if (errors.length > 0) {
     console.error('Packs invalides :')
-    for (const e of errors) console.error(`  - ${e}`)
+    for (const [f, e] of errors) console.error(`  - ${f} : ${rendre(e)}`)
     process.exit(1)
   }
   return packs
@@ -52,7 +65,7 @@ if (commande === 'seed') {
     process.exit(1)
   }
   const chemin = join(MIGRATIONS, `${horodatage()}_${nom}.sql`)
-  writeFileSync(chemin, `-- Généré par \`npm run cards:migration -- ${nom}\` depuis data/packs/*.json.\n-- Additif : rien n'est jamais supprimé.\n\n${upsertSql(packs)}`)
+  writeFileSync(chemin, `-- Généré par \`npm run cards:migration -- ${nom}\` depuis data/packs/*.json.\n-- install_official_pack remplace le jeu de cartes du pack : les anciennes\n-- cartes sont retirées, et supprimées si plus aucune partie ne les référence.\n\n${installSql(packs)}`)
   console.log(`Migration écrite : ${chemin}`)
 } else {
   console.error('Usage : tsx scripts/build-cards.ts seed | migration <nom>')

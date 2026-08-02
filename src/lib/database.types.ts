@@ -400,7 +400,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string
           emoji?: string
-          name?: string
+          name: string
           owner_id?: string | null
           positions?: Json
           slug: string

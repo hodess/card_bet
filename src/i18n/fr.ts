@@ -43,10 +43,6 @@ export const fr: Record<string, string> = {
   'packs.summary': '{count} cartes · notes {min}–{max}',
   'packs.cardCount': '{count} cartes',
   'packs.notFound': 'Pack introuvable',
-  'packs.football.name': 'Football',
-  'packs.football.description': 'Les stars du ballon rond.',
-  'packs.naruto.name': 'Naruto',
-  'packs.naruto.description': 'Ninjas de Konoha et d’ailleurs.',
 
   // --- recherche de joueurs ---
   'search.title': 'Trouver un joueur',
@@ -218,4 +214,27 @@ export const fr: Record<string, string> = {
   'errors.emailAlreadyRegistered': 'Cet email est déjà associé à un compte — connecte-toi plutôt.',
   'errors.invalidCredentials': 'Email ou mot de passe incorrect.',
   'errors.passwordTooShort': 'Mot de passe trop court (6 caractères minimum).',
+
+  // --- erreurs de validation d'un pack (src/lib/packs.ts) ---
+  'packError.json': 'JSON invalide : {message}',
+  'packError.rootNotObject': 'La racine du fichier doit être un objet.',
+  'packError.unknownField': 'Champ inconnu « {field} ».',
+  'packError.name': 'Le nom est obligatoire et fait au plus {max} caractères.',
+  'packError.emoji': 'L’emoji fait au plus {max} caractères.',
+  'packError.description': 'La description fait au plus {max} caractères.',
+  'packError.positions': 'Il faut de 1 à {max} positions.',
+  'packError.positionCode': 'Le code « {code} » fait au plus {max} caractères.',
+  'packError.positionLabel': 'Le libellé de « {code} » est obligatoire et fait au plus {max} caractères.',
+  'packError.cardsCount': 'Il faut de {min} à {max} cartes.',
+  'packError.cardNotObject': 'Carte {index} : doit être un objet.',
+  'packError.cardUnknownField': 'Carte {index} : champ inconnu « {field} ».',
+  'packError.cardName': 'Carte {index} : nom obligatoire, au plus {max} caractères.',
+  'packError.cardDuplicateName': 'Carte {index} : « {name} » apparaît deux fois.',
+  'packError.cardUnknownPosition': 'Carte {index} : position « {position} » absente de positions.',
+  'packError.cardRating': 'Carte {index} : la note doit être un entier entre 1 et 99.',
+  'packError.slugMissing': 'slug manquant — attendu « {file} ».',
+  'packError.slugMismatch': 'slug « {slug} » ≠ nom de fichier « {file} ».',
+  'packError.sortOrder': 'sortOrder doit être un entier supérieur à 0.',
+  'packError.duplicateSlug': 'Le slug « {slug} » est en doublon.',
+  'packError.duplicateSortOrder': 'Le sortOrder de « {slug} » est déjà pris par « {other} ».',
 }

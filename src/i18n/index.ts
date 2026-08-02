@@ -2,6 +2,7 @@
 // donc AUCUN import React ici. Le hook vit dans src/hooks/useT.ts.
 import { fr } from './fr'
 import { en } from './en'
+import { interpolate } from './format'
 
 export { fr, en }
 export type Lang = 'fr' | 'en'
@@ -62,10 +63,7 @@ export function subscribe(cb: () => void): () => void {
 // Clé absente → on renvoie la clé (visible en dev, jamais un crash).
 // Variable absente → le motif {var} reste en place.
 export function t(key: string, vars?: Record<string, string | number>): string {
-  const raw = DICTS[lang][key] ?? key
-  if (!vars) return raw
-  return raw.replace(/\{(\w+)\}/g, (motif, name: string) =>
-    name in vars ? String(vars[name]) : motif)
+  return interpolate(DICTS[lang][key] ?? key, vars)
 }
 
 // Locale de formatage des dates/nombres, accordée à la langue.
