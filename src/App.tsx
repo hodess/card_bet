@@ -13,6 +13,7 @@ import ProfilePage from './pages/ProfilePage'
 import MePage from './pages/MePage'
 import PacksPage from './pages/PacksPage'
 import PackPage from './pages/PackPage'
+import PackEditorPage from './pages/PackEditorPage'
 
 // capture l'éventuelle erreur OAuth du retour Google et nettoie l'URL,
 // avant tout rendu et avant l'init de la session
@@ -54,7 +55,9 @@ export default function App() {
           <Route path="/profile/:username" element={<ProfilePage />} />
           <Route path="/me" element={<MePage />} />
           <Route path="/packs" element={<PacksPage />} />
+          <Route path="/packs/nouveau" element={<PackEditorPage />} />
           <Route path="/packs/:slug" element={<PackPage />} />
+          <Route path="/packs/:slug/editer" element={<PackEditorPage />} />
         </Routes>
       </UsernameGate>
     </HashRouter>

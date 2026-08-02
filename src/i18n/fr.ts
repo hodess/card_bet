@@ -57,6 +57,23 @@ export const fr: Record<string, string> = {
   'packs.deleteConfirm': 'Supprimer « {name} » ? Les parties en cours ne sont pas interrompues.',
   'packs.positionsTitle': 'Positions',
 
+  // --- éditeur de pack ---
+  'editor.titleNew': 'Créer un pack',
+  'editor.titleEdit': 'Éditer un pack',
+  'editor.import': 'Importer .json',
+  'editor.export': 'Exporter',
+  'editor.save': 'Enregistrer',
+  'editor.saving': 'Enregistrement…',
+  'editor.jsonLabel': 'Le JSON de ton pack',
+  'editor.previewLabel': 'Aperçu',
+  'editor.errorsTitle': 'À corriger avant d’enregistrer',
+  'editor.emptyPreview': 'L’aperçu s’affiche dès que le JSON est valide.',
+  'editor.visibility': 'Visibilité',
+  'editor.starter': 'Repartir d’un exemple',
+  'editor.needAccount': 'pour créer un pack.',
+  'editor.loadErrorTitle': 'Impossible de charger ce pack',
+  'editor.retry': 'Réessayer',
+
   // --- recherche de joueurs ---
   'search.title': 'Trouver un joueur',
   'search.placeholder': 'Rechercher un pseudo…',

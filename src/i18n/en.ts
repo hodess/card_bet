@@ -56,6 +56,23 @@ export const en: Record<string, string> = {
   'packs.deleteConfirm': 'Delete "{name}"? Games in progress are not interrupted.',
   'packs.positionsTitle': 'Positions',
 
+  // --- pack editor ---
+  'editor.titleNew': 'Create a pack',
+  'editor.titleEdit': 'Edit a pack',
+  'editor.import': 'Import .json',
+  'editor.export': 'Export',
+  'editor.save': 'Save',
+  'editor.saving': 'Saving…',
+  'editor.jsonLabel': 'Your pack’s JSON',
+  'editor.previewLabel': 'Preview',
+  'editor.errorsTitle': 'Fix before saving',
+  'editor.emptyPreview': 'The preview appears as soon as the JSON is valid.',
+  'editor.visibility': 'Visibility',
+  'editor.starter': 'Start from an example',
+  'editor.needAccount': 'to make a pack.',
+  'editor.loadErrorTitle': 'Couldn’t load this pack',
+  'editor.retry': 'Retry',
+
   // --- recherche de joueurs ---
   'search.title': 'Find a player',
   'search.placeholder': 'Search for a nickname…',
