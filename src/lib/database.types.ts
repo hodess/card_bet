@@ -364,6 +364,7 @@ export type Database = {
           finished_at: string
           game_id: string | null
           id: string
+          private_pack: boolean
           start_bankroll: number
         }
         Insert: {
@@ -371,6 +372,7 @@ export type Database = {
           finished_at?: string
           game_id?: string | null
           id?: string
+          private_pack?: boolean
           start_bankroll: number
         }
         Update: {
@@ -378,6 +380,7 @@ export type Database = {
           finished_at?: string
           game_id?: string | null
           id?: string
+          private_pack?: boolean
           start_bankroll?: number
         }
         Relationships: []
@@ -581,6 +584,7 @@ export type Database = {
       }
       list_packs: { Args: never; Returns: Json }
       list_public_games: { Args: never; Returns: Json }
+      may_host_pack: { Args: { p_slug: string; uid: string }; Returns: boolean }
       open_next_auction: {
         Args: { g_id: string; p_grace?: boolean }
         Returns: undefined

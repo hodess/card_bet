@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(35);
+select plan(46);
 
 create function test_signup(uid uuid, anon boolean default false) returns void
 language plpgsql as $$
@@ -200,6 +200,129 @@ select is(
   (select count(*)::int from json_array_elements(list_packs()) e
    where e->>'slug' in ('football', 'naruto', (select slug from p2))),
   3, 'les packs officiels et le pack public de l''appelant apparaissent dans list_packs');
+
+-- ---------- RLS et règles d'hôte ----------
+-- p3 est le pack PRIVÉ du joueur 2, créé au test 34. Son slug est déterministe
+-- (pseudo « Autre » + nom « Secret »), et le test 15 a déjà épinglé la règle de
+-- génération : on l'écrit donc en clair plutôt que de lire une table temporaire.
+-- C'est nécessaire, pas cosmétique : sous `set local role authenticated`, le
+-- rôle n'a aucun droit sur les tables temporaires de la session.
+
+-- 36-37. un tiers ne voit ni le pack privé ni ses cartes
+select test_signup('00000000-0000-0000-0000-000000000001');
+set local role authenticated;
+select is((select count(*)::int from packs where slug = 'autre~secret'), 0,
+  'le pack privé d''un autre est invisible');
+select is((select count(*)::int from cards where pack = 'autre~secret'), 0,
+  'les cartes d''un pack privé sont invisibles');
+reset role;
+
+-- 38. l'auteur, lui, voit ses cartes
+select test_signup('00000000-0000-0000-0000-000000000002');
+set local role authenticated;
+select is((select count(*)::int from cards where pack = 'autre~secret'), 2,
+  'l''auteur voit les cartes de son pack privé');
+reset role;
+
+-- 39. un pack privé d'autrui est refusé à la création de partie
+select test_signup('00000000-0000-0000-0000-000000000001');
+select throws_ok(
+  $$select create_game('Hodess', null, null, null, null, null, 'private', 2, 'autre~secret')$$,
+  'P0001', 'PACK_NOT_OWNED_BY_HOST',
+  'on ne peut pas héberger une partie dans le pack privé d''un autre');
+
+-- 40. l'auteur peut, lui
+select test_signup('00000000-0000-0000-0000-000000000002');
+create temp table gpriv as select
+  (create_game('Autre', 1, null, null, null, null, 'private', 2,
+               'autre~secret')->>'game_id')::uuid as gid;
+select is((select pack from games where id = (select gid from gpriv)), 'autre~secret',
+  'l''auteur héberge dans son propre pack privé');
+
+-- 41. la revanche lancée par un autre retombe sur le pack par défaut
+select test_signup('00000000-0000-0000-0000-000000000001');
+select join_game((select code from games where id = (select gid from gpriv)), 'Hodess');
+update games set status = 'finished' where id = (select gid from gpriv);
+create temp table revanche as select
+  (rematch_game((select gid from gpriv))->>'game_id')::uuid as gid;
+select is((select pack from games where id = (select gid from revanche)), 'football',
+  'la revanche d''un non-auteur repart sur le pack par défaut');
+
+-- 42. démarrer un salon dont le pack a été supprimé
+select test_signup('00000000-0000-0000-0000-000000000002');
+create temp table gsup as select
+  (create_game('Autre', 1, null, null, null, null, 'private', 2,
+               'autre~secret')->>'game_id')::uuid as gid;
+select test_signup('00000000-0000-0000-0000-000000000001');
+select join_game((select code from games where id = (select gid from gsup)), 'Hodess');
+select test_signup('00000000-0000-0000-0000-000000000002');
+select delete_pack('autre~secret');
+select throws_ok(
+  format($$select start_game(%L)$$, (select gid from gsup)),
+  'P0001', 'PACK_DELETED', 'un salon dont le pack a été supprimé ne démarre pas');
+
+-- 43. la seule raison d'être de la seconde clause de cards_read : un co-joueur
+-- d'une partie en cours sur un pack privé lit ses cartes. Le pack 'autre~secret'
+-- a déjà été supprimé au test 42 : ça montre au passage que cette clause ne
+-- conditionne pas la présence en partie à deleted_at is null (cf. packs_read).
+insert into games (code, status, pack) values ('PRIVCO', 'playing', 'autre~secret');
+insert into players (game_id, auth_uid, nickname, seat, bankroll)
+select id, '00000000-0000-0000-0000-000000000001'::uuid, 'Hodess', 1, 1000
+from games where code = 'PRIVCO';
+select test_signup('00000000-0000-0000-0000-000000000001');
+set local role authenticated;
+select is((select count(*)::int from cards where pack = 'autre~secret'), 2,
+  'un co-joueur d''une partie en cours sur pack privé voit les cartes de ce pack');
+reset role;
+
+-- 44. la branche positive de rematch_game, jusqu'ici non couverte : une
+-- revanche relancée par l'auteur garde son pack privé. On en crée un nouveau,
+-- actif, plutôt que de réutiliser 'autre~secret' déjà supprimé au test 42.
+select test_signup('00000000-0000-0000-0000-000000000002');
+create temp table p5 as
+  select save_pack(null, payload('{"name": "Secret Bis"}'), 'private')->>'slug' as slug;
+create temp table gpriv2 as select
+  (create_game('Autre', 1, null, null, null, null, 'private', 2,
+               (select slug from p5))->>'game_id')::uuid as gid;
+update games set status = 'finished' where id = (select gid from gpriv2);
+create temp table revanche2 as select
+  (rematch_game((select gid from gpriv2))->>'game_id')::uuid as gid;
+select is((select pack from games where id = (select gid from revanche2)), (select slug from p5),
+  'la revanche relancée par l''auteur garde son pack privé');
+
+-- 45-46. le snapshot d'un match joué sur pack privé (match_cards) n'est
+-- lisible que par ses joueurs. deck_size = 7 est une sentinelle unique dans ce
+-- fichier : elle permet de retrouver le match sous `set local role
+-- authenticated` sans passer par games (RLS restrictive, cf. is_player) ni par
+-- une table temporaire (inaccessible sous ce rôle).
+insert into games (code, status, pack, deck_size)
+values ('PRIVM1', 'playing', (select slug from p5), 7);
+insert into players (game_id, auth_uid, nickname, seat, bankroll)
+select id, '00000000-0000-0000-0000-000000000002'::uuid, 'Autre', 0, 990 from games where code = 'PRIVM1'
+union all
+select id, '00000000-0000-0000-0000-000000000001'::uuid, 'Hodess', 1, 990 from games where code = 'PRIVM1';
+insert into player_cards (game_id, player_id, card_id, price_paid)
+select p.game_id, p.id, c.id, 10
+from players p
+join games g on g.id = p.game_id
+join cards c on c.pack = g.pack
+where g.code = 'PRIVM1'
+  and ((p.seat = 0 and c.name = 'Dracaufeu') or (p.seat = 1 and c.name = 'Tortank'));
+update games set status = 'finished' where code = 'PRIVM1';
+
+select test_signup('00000000-0000-0000-0000-000000000003');
+set local role authenticated;
+select is(
+  (select count(*)::int from match_cards where match_id = (select id from matches where deck_size = 7)),
+  0, 'un tiers ne voit aucune carte du snapshot d''un match joué sur pack privé');
+reset role;
+
+select test_signup('00000000-0000-0000-0000-000000000001');
+set local role authenticated;
+select is(
+  (select count(*)::int from match_cards where match_id = (select id from matches where deck_size = 7)),
+  2, 'un participant voit les cartes du snapshot d''un match joué sur pack privé');
+reset role;
 
 select * from finish();
 rollback;
