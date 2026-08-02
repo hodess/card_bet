@@ -30,6 +30,25 @@ Toute nouvelle fonctionnalité respecte ce partage : l'arbitre, c'est Postgres.
 
 Workflow schéma : migration → `db reset` → `test db` → régénérer les types.
 
+**Horodatage des migrations.** Une migration doit toujours porter un horodatage
+**postérieur** à la dernière migration déjà sur `main`. Sinon `supabase db push`
+la refuse en production (« Found local migration files to be inserted before the
+last migration on remote database ») et le déploiement casse **après** le merge :
+le job `test`, qui part d'une base vide, ne voit rien. Le cas arrive dès que deux
+chantiers avancent en parallèle et que celui qui fusionne en second porte des
+horodatages plus anciens. Si ça se produit, renommer les fichiers concernés avec
+un horodatage plus récent, en conservant leur ordre relatif. Le job `migrations`
+de la CI vérifie ce point sur chaque PR (`scripts/check-migration-order.sh`) et
+applique en plus les nouvelles migrations par-dessus l'état de la base, comme le
+fait la prod.
+
+**Une seule migration fait autorité sur une fonction donnée.** Deux chantiers qui
+redéfinissent la même fonction Postgres se marchent dessus en silence : l'ordre
+des horodatages décide du gagnant, et `create or replace` ne prévient de rien.
+Un test pgTAP par comportement attendu est la seule protection — c'est ainsi que
+la recopie de `bot_level` dans `match_players`, perdue par une collision de ce
+type, a été rattrapée.
+
 ## Architecture des données
 
 - **Éphémère** (purge pg_cron à 24 h) : `games`, `players`, `game_cards`,

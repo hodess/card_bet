@@ -53,58 +53,10 @@ begin
   return json_build_object('game_id', g.id);
 end $$;
 
--- Recopie du niveau dans l'historique persistant.
-create or replace function record_match() returns trigger
-language plpgsql security definer set search_path = public as $$
-declare
-  m_id uuid;
-begin
-  begin
-    -- comptes uniquement : sans profil dans la partie, rien à écrire
-    if not exists (
-      select 1 from players p join profiles pr on pr.id = p.auth_uid
-      where p.game_id = new.id
-    ) then
-      return new;
-    end if;
-
-    insert into matches (game_id, deck_size, start_bankroll)
-    values (new.id, new.deck_size, new.start_bankroll)
-    returning id into m_id;
-
-    with scored as (
-      select p.id as player_id, p.seat, p.nickname, p.bankroll, p.is_bot, p.bot_level,
-             pr.id as profile_id,
-             coalesce((select sum(c.rating)
-                       from player_cards pc join cards c on c.id = pc.card_id
-                       where pc.player_id = p.id), 0)::int as score
-      from players p
-      left join profiles pr on pr.id = p.auth_uid
-      where p.game_id = new.id
-    ),
-    ranked as (
-      select *, rank() over (order by score desc, bankroll desc) as rk
-      from scored
-    )
-    insert into match_players (match_id, profile_id, nickname, seat, score,
-                               money_left, result, is_bot, bot_level)
-    select m_id, profile_id, nickname, seat, score, bankroll,
-           case
-             when rk > 1 then 'loss'
-             when count(*) over (partition by rk) > 1 then 'draw'
-             else 'win'
-           end,
-           is_bot, bot_level
-    from ranked;
-
-    insert into match_cards (match_id, seat, card_id, price_paid)
-    select m_id, p.seat, pc.card_id, pc.price_paid
-    from player_cards pc
-    join players p on p.id = pc.player_id
-    where pc.game_id = new.id;
-  exception when others then
-    -- l'historique est un bonus : une fin de partie ne doit jamais casser
-    raise warning 'record_match failed for game %: %', new.id, sqlerrm;
-  end;
-  return new;
-end $$;
+-- La recopie de bot_level dans match_players n'est PAS faite ici, mais dans la
+-- migration v2_2_bot_level_record_match qui suit. Raison : le chantier « création
+-- de packs » a redéfini record_match() entre-temps (private_pack, snapshot des
+-- cartes). Une version de la fonction écrite ici écraserait la leur pendant le
+-- déploiement, avant d'être elle-même corrigée par la migration suivante — une
+-- fenêtre où l'historique serait écrit de travers. Une seule migration, la
+-- dernière, fait autorité sur record_match().
