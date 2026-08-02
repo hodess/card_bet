@@ -16,6 +16,10 @@ notes l'emporte. Monnaie 100 % virtuelle, parties de quelques minutes.
 5. La partie s'arrête quand tous les decks sont pleins. Meilleur total de notes gagne ;
    départage à l'argent restant.
 
+Le pack de cartes se choisit à la création de la partie (et se change dans le
+salon) sur `/packs` : packs officiels, packs publiés par la communauté, ou un
+pack perso créé dans l'éditeur JSON avec aperçu en direct (`/packs/nouveau`).
+
 Règles complètes et versionnées : [`RULES.md`](RULES.md).
 
 Interface bilingue FR/EN, avec un sélecteur de langue accessible depuis n'importe quel écran, y compris en partie.
@@ -41,8 +45,9 @@ navigateur. Mise en place de Supabase : [`initSupabase.md`](initSupabase.md).
   amis. Les parties restent temporaires ; seuls comptes/historique/amis sont
   persistés. Design : [`docs/superpowers/specs/2026-07-29-v1-comptes-design.md`](docs/superpowers/specs/2026-07-29-v1-comptes-design.md)
 - **V2 (en cours)** — 2 à 8 joueurs, plusieurs packs (Football, Naruto…) choisis
-  dans le salon d'une partie privée. Reste à faire : joker (refuser une ouverture
-  forcée), invitations d'amis en partie, ranking ELO.
+  dans le salon d'une partie privée, création de packs par les joueurs (privés ou
+  publiés) sur `/packs`. Reste à faire : joker (refuser une ouverture forcée),
+  invitations d'amis en partie, ranking ELO.
 
 ## Développement local
 

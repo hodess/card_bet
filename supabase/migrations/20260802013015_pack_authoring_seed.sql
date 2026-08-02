@@ -1,6 +1,6 @@
--- Fichier généré par `npm run cards:seed` — NE PAS ÉDITER.
--- Source de vérité : data/packs/*.json. Modifier un pack puis régénérer.
--- Un test vitest vérifie que ce fichier correspond bien aux JSON.
+-- Généré par `npm run cards:migration -- pack_authoring_seed` depuis data/packs/*.json.
+-- install_official_pack remplace le jeu de cartes du pack : les anciennes
+-- cartes sont retirées, et supprimées si plus aucune partie ne les référence.
 
 select install_official_pack($json$
 {
@@ -434,3 +434,7 @@ select install_official_pack($json$
   ]
 }
 $json$::jsonb, 'naruto', 2);
+
+-- Le défaut '' n'existait que le temps que les packs officiels acquièrent leur
+-- nom. Il part maintenant : plus aucune insertion ne peut créer un pack anonyme.
+alter table packs alter column name drop default;

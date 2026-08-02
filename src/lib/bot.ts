@@ -23,7 +23,13 @@ export function startBot(gameCode: string, nickname: string, level: BotLevel): (
   // Le pack ne change jamais : une seule lecture pour toute la partie, indexée par
   // id de carte pour servir aussi bien la note de la carte en cours que celles des
   // cartes déjà passées en enchère.
-  let pack: Map<number, number> | null = null
+  //
+  // On garde le pack ENTIER, cartes retirées incluses, mais le pool ne retient que
+  // les non retirées : `start_game` ne verse que celles-là dans la partie, donc un
+  // pool qui les compterait serait faussé. En revanche la recherche de note doit
+  // rester robuste — un auteur peut retirer une carte pendant qu'une partie tourne,
+  // et cette carte est déjà en jeu.
+  let pack: Map<number, { rating: number; retired: boolean }> | null = null
 
   const bot = createClient<Database>(
     import.meta.env.VITE_SUPABASE_URL,
@@ -83,12 +89,12 @@ export function startBot(gameCode: string, nickname: string, level: BotLevel): (
       // tick. Toutes les cartes d'une partie viennent du pack de la partie.
       if (pack === null) {
         const { data: rows, error: packError } = await bot
-          .from('cards').select('id, rating').eq('pack', game.pack)
+          .from('cards').select('id, rating, retired').eq('pack', game.pack)
         if (packError || !rows) return   // on retentera au tick suivant
-        pack = new Map(rows.map(c => [c.id, c.rating]))
+        pack = new Map(rows.map(c => [c.id, { rating: c.rating, retired: c.retired }]))
       }
-      const noteDe = (cardId: number) => pack!.get(cardId)
-      const packRatings = [...pack.values()]
+      const noteDe = (cardId: number) => pack!.get(cardId)?.rating
+      const packRatings = [...pack.values()].filter(c => !c.retired).map(c => c.rating)
 
       const cardRating = noteDe(auction.card_id)
       if (cardRating === undefined) return   // pack incomplet : on attend le tick suivant

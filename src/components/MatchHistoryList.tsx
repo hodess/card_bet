@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import config from '../config.json'
-import Card, { type CardData } from './Card'
+import Card from './Card'
 import BotBadge from './BotBadge'
 import { useT } from '../hooks/useT'
 import { locale } from '../i18n'
@@ -25,7 +25,7 @@ type HistoryRow = {
   players: number
   opponents: Adversaire[]
 }
-type DeckCard = { seat: number; price_paid: number; card: CardData & { id: number } }
+type DeckCard = { seat: number; price_paid: number; card: { id: number; name: string; position: string; rating: number } }
 
 // L'historique d'un profil : liste paginée + decks dépliables.
 export default function MatchHistoryList({ profileId }: { profileId: string }) {
@@ -92,9 +92,13 @@ export default function MatchHistoryList({ profileId }: { profileId: string }) {
       return
     }
     const { data } = await supabase.from('match_cards')
-      .select('seat, price_paid, card:cards(*)')
+      .select('seat, price_paid, card_id, card_name, card_position, card_rating')
       .eq('match_id', matchId)
-    setDecks(d => ({ ...d, [matchId]: (data as unknown as DeckCard[]) ?? [] }))
+    setDecks(d => ({ ...d, [matchId]: (data ?? []).map(c => ({
+      seat: c.seat,
+      price_paid: c.price_paid,
+      card: { id: c.card_id, name: c.card_name, position: c.card_position, rating: c.card_rating },
+    })) }))
   }
 
   return (
@@ -131,11 +135,17 @@ export default function MatchHistoryList({ profileId }: { profileId: string }) {
                 : t('history.lineSolo', { score: r.score, money: r.moneyLeft, date })}
             </span>
             {decks[r.matchId] && (
-              <div className="mini-cards">
-                {decks[r.matchId].map(c => (
-                  <Card key={`${c.seat}-${c.card.id}`} card={c.card} size="mini" price={c.price_paid} />
-                ))}
-              </div>
+              decks[r.matchId].length > 0 ? (
+                <div className="mini-cards">
+                  {decks[r.matchId].map(c => (
+                    <Card key={`${c.seat}-${c.card.id}`} card={c.card} size="mini" price={c.price_paid} />
+                  ))}
+                </div>
+              ) : (
+                // Pack privé de la partie : la RLS de match_cards ne renvoie rien à
+                // qui n'y a pas joué. Sans ce message, le panneau s'ouvrirait vide.
+                <p className="hint">{t('history.deckPrivate')}</p>
+              )
             )}
           </div>
           <button className="secondary" onClick={() => toggleDeck(r.matchId)}>

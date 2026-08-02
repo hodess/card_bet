@@ -107,7 +107,7 @@ export default function Lobby({ state, onAddBot }: {
       <h1>
         {t('lobby.title')}{' '}
         <span className="badge">{isPrivate ? t('lobby.private') : t('lobby.public')}</span>{' '}
-        <span className="badge">{t(`packs.${game!.pack}.name`)}</span>
+        <span className="badge">{packs.find(p => p.slug === game!.pack)?.name ?? game!.pack}</span>
       </h1>
       <p>{t('lobby.code')} <strong className="code">{game!.code}</strong></p>
       <p className="hint">
@@ -131,7 +131,7 @@ export default function Lobby({ state, onAddBot }: {
       <section className="public-setup">
         <h2>{canEdit ? t('lobby.settings') : t('lobby.settingsReadOnly')}</h2>
         <GameSettingsFields value={draft} onChange={setDraft} disabled={!canEdit}
-          packs={packs.map(p => p.slug)} />
+          packs={packs} />
         {/* échec de list_packs : le sélecteur retombe en lecture seule sans ce message */}
         {packsError && <p className="error">{packsError}</p>}
         {canEdit && (
