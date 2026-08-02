@@ -592,6 +592,7 @@ export type Database = {
       pass_auction: { Args: { g_id: string }; Returns: undefined }
       place_bid: { Args: { amount: number; g_id: string }; Returns: undefined }
       profile_id_of: { Args: { p_username: string }; Returns: string }
+      purge_retired_cards: { Args: never; Returns: undefined }
       rematch_game: { Args: { old_game_id: string }; Returns: Json }
       remove_friendship: { Args: { p_username: string }; Returns: undefined }
       replace_pack_cards: {
