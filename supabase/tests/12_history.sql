@@ -30,8 +30,9 @@ language plpgsql as $$
 declare g_id uuid;
 begin
   insert into games (code, status, deck_size) values (p_code, 'playing', 1) returning id into g_id;
-  insert into players (game_id, auth_uid, nickname, seat, bankroll, is_bot)
-  values (g_id, uid0, n0, 0, bank0, false), (g_id, uid1, n1, 1, bank1, bot1);
+  insert into players (game_id, auth_uid, nickname, seat, bankroll, is_bot, bot_level)
+  values (g_id, uid0, n0, 0, bank0, false, null),
+         (g_id, uid1, n1, 1, bank1, bot1, case when bot1 then 'medium' else null end);
   insert into player_cards (game_id, player_id, card_id, price_paid)
   select g_id, p.id, case p.seat when 0 then card0 else card1 end, 10
   from players p where p.game_id = g_id;

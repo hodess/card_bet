@@ -15,6 +15,10 @@ dist-ssr
 # Docs de travail (specs/plans locaux, non versionnés)
 docs/
 
+# Outillage d'agents : worktrees et état de session. Contient une copie complète
+# du dépôt, que vitest et oxlint compteraient en double sans cette exclusion.
+.claude/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

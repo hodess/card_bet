@@ -3,11 +3,18 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import config from '../config.json'
 import Card, { type CardData } from './Card'
+import BotBadge from './BotBadge'
 import { useT } from '../hooks/useT'
 import { locale } from '../i18n'
 import { rankRows } from '../lib/ranking'
 
-type Adversaire = { nickname: string; username: string | null; score: number; isBot: boolean }
+type Adversaire = {
+  nickname: string
+  username: string | null
+  score: number
+  isBot: boolean
+  botLevel: string | null
+}
 type HistoryRow = {
   matchId: string
   finishedAt: string
@@ -45,7 +52,7 @@ export default function MatchHistoryList({ profileId }: { profileId: string }) {
     }
     const batchResults = await Promise.all(batches.map(batch =>
       supabase.from('match_players')
-        .select('match_id, seat, nickname, profile_id, score, money_left, is_bot, profile:profiles(username)')
+        .select('match_id, seat, nickname, profile_id, score, money_left, is_bot, bot_level, profile:profiles(username)')
         .in('match_id', batch),
     ))
     const all = batchResults.flatMap(({ data }) => data ?? [])
@@ -67,6 +74,7 @@ export default function MatchHistoryList({ profileId }: { profileId: string }) {
           username: (c.row.profile as { username: string } | null)?.username ?? null,
           score: c.row.score,
           isBot: c.row.is_bot,
+          botLevel: c.row.bot_level,
         })),
       }
     }).sort((a, b) => b.finishedAt.localeCompare(a.finishedAt)))
@@ -111,7 +119,7 @@ export default function MatchHistoryList({ profileId }: { profileId: string }) {
                 {i > 0 && ', '}
                 {o.username
                   ? <Link className="player-link" to={`/profile/${o.username}`}>{o.username}</Link>
-                  : <>{o.nickname}{o.isBot && <span className="badge"> {t('common.bot')}</span>}</>}
+                  : <>{o.nickname}<BotBadge isBot={o.isBot} level={o.botLevel} /></>}
               </span>
             ))}
             {r.opponents.length > 2 && <> {t('history.andMore', { n: r.opponents.length - 2 })}</>}

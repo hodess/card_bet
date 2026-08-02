@@ -307,6 +307,7 @@ export type Database = {
       }
       match_players: {
         Row: {
+          bot_level: string | null
           is_bot: boolean
           match_id: string
           money_left: number
@@ -317,6 +318,7 @@ export type Database = {
           seat: number
         }
         Insert: {
+          bot_level?: string | null
           is_bot?: boolean
           match_id: string
           money_left: number
@@ -327,6 +329,7 @@ export type Database = {
           seat: number
         }
         Update: {
+          bot_level?: string | null
           is_bot?: boolean
           match_id?: string
           money_left?: number
@@ -439,6 +442,7 @@ export type Database = {
         Row: {
           auth_uid: string
           bankroll: number
+          bot_level: string | null
           game_id: string
           id: string
           is_bot: boolean
@@ -448,6 +452,7 @@ export type Database = {
         Insert: {
           auth_uid: string
           bankroll: number
+          bot_level?: string | null
           game_id: string
           id?: string
           is_bot?: boolean
@@ -457,6 +462,7 @@ export type Database = {
         Update: {
           auth_uid?: string
           bankroll?: number
+          bot_level?: string | null
           game_id?: string
           id?: string
           is_bot?: boolean
@@ -526,7 +532,12 @@ export type Database = {
       has_challenger: { Args: { p_auction_id: string }; Returns: boolean }
       is_player: { Args: { g_id: string }; Returns: boolean }
       join_game: {
-        Args: { game_code: string; nickname: string; p_is_bot?: boolean }
+        Args: {
+          game_code: string
+          nickname: string
+          p_bot_level?: string
+          p_is_bot?: boolean
+        }
         Returns: Json
       }
       join_game_by_id: {

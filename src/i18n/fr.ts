@@ -12,6 +12,11 @@ export const fr: Record<string, string> = {
   'common.scoreLine': '— {score} pts',
   'common.moneyLeft': '(reste {money} €)',
 
+  // --- niveaux de bot ---
+  'bot.level.easy': 'Facile',
+  'bot.level.medium': 'Moyen',
+  'bot.level.hard': 'Difficile',
+
   // --- navigation ---
   'nav.menu': 'Menu',
   'nav.home': 'Accueil',
@@ -88,6 +93,7 @@ export const fr: Record<string, string> = {
   'lobby.saving': 'Enregistrement…',
   'lobby.saveSettings': 'Enregistrer les réglages',
   'lobby.addBot': '+ Ajouter un bot',
+  'lobby.addBotLabel': 'Ajouter un bot :',
   'lobby.botComing': 'Bot en route…',
   'lobby.start': 'Démarrer',
   'lobby.waitingHost': 'En attente de l’hôte…',
@@ -208,6 +214,7 @@ export const fr: Record<string, string> = {
   'errors.CANNOT_KICK_SELF': 'Tu ne peux pas t’exclure toi-même.',
   'errors.NOT_ENOUGH_PLAYERS': 'Il faut au moins 2 joueurs.',
   'errors.UNKNOWN_PACK': 'Ce pack de cartes n’existe pas.',
+  'errors.BOT_LEVEL_INVALID': 'Niveau de bot inconnu.',
   'errors.PLAYER_NOT_FOUND': 'Joueur introuvable.',
   'errors.SELF_FRIENDSHIP': 'Tu ne peux pas t’ajouter toi-même.',
   'errors.ALREADY_FRIENDS': 'Vous êtes déjà amis.',

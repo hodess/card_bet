@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { t } from '../i18n'
 import { useGame } from '../hooks/useGame'
-import { pickBotName, startBot } from '../lib/bot'
+import { startBot } from '../lib/bot'
+import type { BotLevel } from '../lib/botBrain'
+import { pickBotName } from '../lib/botNames'
 import Lobby from '../components/Lobby'
 import Auction from '../components/Auction'
 import Results from '../components/Results'
@@ -29,10 +31,10 @@ export default function GamePage() {
   // de la partie précédente survivraient et fausseraient pickBotName ici.
   useEffect(() => { requestedNames.current = [] }, [gameId])
 
-  function addBot(code: string, seatedNames: string[]) {
+  function addBot(code: string, seatedNames: string[], level: BotLevel) {
     const nickname = pickBotName([...seatedNames, ...requestedNames.current])
     requestedNames.current.push(nickname)
-    botStops.current.push(startBot(code, nickname))
+    botStops.current.push(startBot(code, nickname, level))
   }
 
   if (state.loading) return <p className="center">{t('common.loading')}</p>

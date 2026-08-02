@@ -124,7 +124,12 @@ Périmètre volontairement minimal : valider le système de mise temps réel de 
 - **Bouton "Je passe"** : un joueur qui ne mène pas peut se retirer de l'enchère en cours.
 - **Clôture immédiate** : dès qu'aucun joueur ne peut ou ne veut surenchérir, la carte est adjugée immédiatement, sans attendre le délai.
 - **Délais configurables par partie** : le délai d'adjudication est paramétrable à la création.
-- **Bot d'entraînement** : permet de jouer seul contre l'IA pour s'entraîner.
+- **Bot d'entraînement** : permet de jouer seul contre l'IA pour s'entraîner. Trois
+  niveaux (facile, moyen, difficile), choisis par l'hôte à l'ajout de chaque bot et
+  conservés dans l'historique des parties. Un bot ne voit que ce qu'un joueur humain
+  voit à la table : les notes du pack, les cartes déjà passées en enchère, les prix
+  déjà payés, les bankrolls et les decks de chacun. L'ordre du tirage à venir lui
+  reste inconnu, exactement comme pour un humain.
 - **Thème FUT** : interface et cartes à l'esthétique FIFA Ultimate Team.
 
 ### V1 — Le vrai jeu multijoueur

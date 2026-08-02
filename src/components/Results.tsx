@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { GameState } from '../hooks/useGame'
 import PlayerName from './PlayerName'
+import BotBadge from './BotBadge'
 import Card from './Card'
 import { useUsernames } from '../hooks/useUsernames'
 import { joinGameById, rematchGame } from '../lib/gameApi'
@@ -51,6 +52,7 @@ export default function Results({ state }: { state: GameState }) {
         <section key={player.id} className={`result-row${rank === 1 ? ' winner' : ''}`}>
           <h2>
             <PlayerName nickname={player.nickname} username={usernames[player.auth_uid]} />
+            <BotBadge isBot={player.is_bot} level={player.bot_level} />
             {' '}{t('common.scoreLine', { score: total })}{' '}
             <small>{t('common.moneyLeft', { money: player.bankroll })}</small>
           </h2>

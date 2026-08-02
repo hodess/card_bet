@@ -11,6 +11,11 @@ export const en: Record<string, string> = {
   'common.scoreLine': '— {score} pts',
   'common.moneyLeft': '({money} € left)',
 
+  // --- bot levels ---
+  'bot.level.easy': 'Easy',
+  'bot.level.medium': 'Medium',
+  'bot.level.hard': 'Hard',
+
   // --- navigation ---
   'nav.menu': 'Menu',
   'nav.home': 'Home',
@@ -87,6 +92,7 @@ export const en: Record<string, string> = {
   'lobby.saving': 'Saving…',
   'lobby.saveSettings': 'Save settings',
   'lobby.addBot': '+ Add a bot',
+  'lobby.addBotLabel': 'Add a bot:',
   'lobby.botComing': 'Bot on its way…',
   'lobby.start': 'Start',
   'lobby.waitingHost': 'Waiting for the host…',
@@ -207,6 +213,7 @@ export const en: Record<string, string> = {
   'errors.CANNOT_KICK_SELF': 'You can’t kick yourself.',
   'errors.NOT_ENOUGH_PLAYERS': 'At least 2 players are needed.',
   'errors.UNKNOWN_PACK': 'That card pack does not exist.',
+  'errors.BOT_LEVEL_INVALID': 'Unknown bot level.',
   'errors.PLAYER_NOT_FOUND': 'Player not found.',
   'errors.SELF_FRIENDSHIP': 'You cannot add yourself.',
   'errors.ALREADY_FRIENDS': 'You are already friends.',

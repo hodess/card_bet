@@ -44,7 +44,9 @@ Workflow schéma : migration → `db reset` → `test db` → régénérer les t
   réseau (exceptions actées : `FriendButton`, `MatchHistoryList`).
 - `src/hooks/` : état partagé/realtime (`useGame`, `useProfile`, `useFriendships`…).
 - `src/lib/` : fonctions pures et accès Supabase (`game.ts`, `gameApi.ts`,
-  `errors.ts`, `auth.ts`, `bot.ts`).
+  `errors.ts`, `auth.ts`, `bot.ts` le runtime des bots, `botBrain.ts` leur logique
+  de décision, `botNames.ts` leurs noms et tempéraments, `botSim.ts` le banc d'essai
+  qui calibre les niveaux).
 - `src/i18n/` : dictionnaires plats `fr.ts`/`en.ts` et le singleton `t()`,
   utilisable hors React (`errors.ts` en dépend). Le hook `useT` correspondant
   vit dans `src/hooks/`.
@@ -71,7 +73,12 @@ Workflow schéma : migration → `db reset` → `test db` → régénérer les t
 6. **Français partout** : UI, commentaires, messages de commit, docs.
 7. **Toute migration arrive avec ses tests pgTAP** (`supabase/tests/`, pattern
    `test_signup` pour simuler des comptes). Toute fonction pure nouvelle dans
-   `lib/` arrive avec son test vitest.
+   `lib/` arrive avec son test vitest — `botSim.ts` ne fait pas exception, il a
+   les siens (`botSim.test.ts`). Ce qui fait exception, c'est son rôle : c'est un
+   banc d'essai qui rejoue l'enchère en tours discrets, sans réseau ni minuterie —
+   il ne remplace pas le serveur et ne doit jamais servir à valider une règle du
+   jeu (ça, c'est le rôle de pgTAP), seulement à comparer les niveaux de bot
+   entre eux.
 8. **Comportement serveur d'abord** : ne jamais faire confiance au client
    (validation, identité, montants — tout est revérifié en SQL).
 

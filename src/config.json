@@ -19,13 +19,74 @@
     }
   },
   "bot": {
-    "bidProbability": 0.6,
-    "passProbability": 0.3,
     "pollMs": 800,
-    "delayMinMs": 500,
-    "delayMaxMs": 2500,
     "joinTimeoutMs": 5000,
-    "names": ["Bot Zizou", "Bot Bielsa", "Bot Pep", "Bot Arsène"]
+    "names": ["Bot Zizou", "Bot Bielsa", "Bot Pep", "Bot Arsène"],
+    "temperaments": {
+      "Bot Zizou": { "kappa": 1.12, "gamma": 1, "restraint": 0.95, "jumpRate": 1.6, "delayFactor": 1.1 },
+      "Bot Bielsa": { "kappa": 1, "gamma": 1, "restraint": 0.85, "jumpRate": 0, "delayFactor": 1 },
+      "Bot Pep": { "kappa": 1, "gamma": 1.25, "restraint": 0.88, "jumpRate": 0.8, "delayFactor": 0.95 },
+      "Bot Arsène": { "kappa": 0.88, "gamma": 1, "restraint": 0.72, "jumpRate": 0.5, "delayFactor": 0.9 }
+    },
+    "suffixShift": { "kappa": 0.03, "restraint": 0.02 },
+    "jumpFraction": 0.6,
+    "easyIncrementWeights": [0.5, 0.3, 0.2],
+    "faultRenunciationShare": 0.5,
+    "priceMemory": { "min": 1.0, "max": 1.6 },
+    "simMaxRounds": 200,
+    "levels": {
+      "easy": {
+        "kappa": 2,
+        "gamma": 1.5,
+        "noise": 0.45,
+        "errorRate": 0.25,
+        "errorOverbid": 1.5,
+        "selectivity": "fixed",
+        "fixedThreshold": 0.65,
+        "smartIncrements": false,
+        "jumpRate": 0,
+        "readsRivals": false,
+        "priceMemory": false,
+        "delayMinMs": 1200,
+        "delayMaxMs": 3000,
+        "spendFloor": 0.45,
+        "spendFloorAdapts": false
+      },
+      "medium": {
+        "kappa": 2,
+        "gamma": 1.5,
+        "noise": 0.1,
+        "errorRate": 0,
+        "errorOverbid": 1,
+        "selectivity": "ratio",
+        "fixedThreshold": 0.5,
+        "smartIncrements": true,
+        "jumpRate": 0.15,
+        "readsRivals": false,
+        "priceMemory": false,
+        "delayMinMs": 600,
+        "delayMaxMs": 1800,
+        "spendFloor": 0.25,
+        "spendFloorAdapts": false
+      },
+      "hard": {
+        "kappa": 2,
+        "gamma": 1.5,
+        "noise": 0.03,
+        "errorRate": 0,
+        "errorOverbid": 1,
+        "selectivity": "ratio",
+        "fixedThreshold": 0.5,
+        "smartIncrements": true,
+        "jumpRate": 0.2,
+        "readsRivals": true,
+        "priceMemory": true,
+        "delayMinMs": 300,
+        "delayMaxMs": 900,
+        "spendFloor": 0.28,
+        "spendFloorAdapts": true
+      }
+    }
   },
   "ui": {
     "historyPageSize": 20,
