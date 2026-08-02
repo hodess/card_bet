@@ -32,7 +32,7 @@ export default function MatchSummary({ gameId }: { gameId: string }) {
       const { data, error } = await supabase.from('matches')
         .select(`finished_at,
           match_players(seat, nickname, score, money_left, result, is_bot, profile:profiles(username)),
-          match_cards(seat, price_paid, card:cards(*))`)
+          match_cards(seat, price_paid, card_id, card_name, card_position, card_rating)`)
         .eq('game_id', gameId)
         .maybeSingle()
       if (!alive) return
@@ -52,7 +52,12 @@ export default function MatchSummary({ gameId }: { gameId: string }) {
           cards: (data.match_cards ?? []).map(c => ({
             seat: c.seat,
             price: c.price_paid,
-            card: c.card as unknown as SummaryCard['card'],
+            card: {
+              id: c.card_id,
+              name: c.card_name,
+              position: c.card_position,
+              rating: c.card_rating,
+            },
           })),
         })
       }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import config from '../config.json'
-import Card, { type CardData } from './Card'
+import Card from './Card'
 import { useT } from '../hooks/useT'
 import { locale } from '../i18n'
 import { rankRows } from '../lib/ranking'
@@ -18,7 +18,7 @@ type HistoryRow = {
   players: number
   opponents: Adversaire[]
 }
-type DeckCard = { seat: number; price_paid: number; card: CardData & { id: number } }
+type DeckCard = { seat: number; price_paid: number; card: { id: number; name: string; position: string; rating: number } }
 
 // L'historique d'un profil : liste paginée + decks dépliables.
 export default function MatchHistoryList({ profileId }: { profileId: string }) {
@@ -84,9 +84,13 @@ export default function MatchHistoryList({ profileId }: { profileId: string }) {
       return
     }
     const { data } = await supabase.from('match_cards')
-      .select('seat, price_paid, card:cards(*)')
+      .select('seat, price_paid, card_id, card_name, card_position, card_rating')
       .eq('match_id', matchId)
-    setDecks(d => ({ ...d, [matchId]: (data as unknown as DeckCard[]) ?? [] }))
+    setDecks(d => ({ ...d, [matchId]: (data ?? []).map(c => ({
+      seat: c.seat,
+      price_paid: c.price_paid,
+      card: { id: c.card_id, name: c.card_name, position: c.card_position, rating: c.card_rating },
+    })) }))
   }
 
   return (

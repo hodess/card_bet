@@ -272,30 +272,32 @@ export type Database = {
       match_cards: {
         Row: {
           card_id: number
+          card_name: string
+          card_position: string
+          card_rating: number
           match_id: string
           price_paid: number
           seat: number
         }
         Insert: {
           card_id: number
+          card_name: string
+          card_position: string
+          card_rating: number
           match_id: string
           price_paid: number
           seat: number
         }
         Update: {
           card_id?: number
+          card_name?: string
+          card_position?: string
+          card_rating?: number
           match_id?: string
           price_paid?: number
           seat?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "match_cards_card_id_fkey"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "cards"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "match_cards_match_id_fkey"
             columns: ["match_id"]
