@@ -8,83 +8,143 @@
     "maxPlayers": 2,
     "pack": "football",
     "limits": {
-      "deckSize": { "min": 1, "max": 10, "step": 1 },
-      "startBankroll": { "min": 100, "max": 100000, "step": 100 },
-      "minBid": { "min": 1, "max": 1000, "step": 5 },
-      "closeDelaySeconds": { "min": 1, "max": 60, "step": 1 },
-      "maxPlayers": { "min": 2, "max": 8, "step": 1 }
+      "deckSize": {
+        "min": 1,
+        "max": 10,
+        "step": 1
+      },
+      "startBankroll": {
+        "min": 100,
+        "max": 100000,
+        "step": 100
+      },
+      "minBid": {
+        "min": 1,
+        "max": 1000,
+        "step": 5
+      },
+      "closeDelaySeconds": {
+        "min": 1,
+        "max": 60,
+        "step": 1
+      },
+      "maxPlayers": {
+        "min": 2,
+        "max": 8,
+        "step": 1
+      }
     },
     "ui": {
-      "increments": [10, 50, 100]
+      "increments": [
+        10,
+        50,
+        100
+      ]
     }
   },
   "bot": {
     "pollMs": 800,
     "joinTimeoutMs": 5000,
-    "names": ["Bot Zizou", "Bot Bielsa", "Bot Pep", "Bot Arsène"],
+    "names": [
+      "Bot Zizou",
+      "Bot Bielsa",
+      "Bot Pep",
+      "Bot Arsène"
+    ],
     "temperaments": {
-      "Bot Zizou": { "kappa": 1.12, "gamma": 1, "restraint": 0.95, "jumpRate": 1.6, "delayFactor": 1.1 },
-      "Bot Bielsa": { "kappa": 1, "gamma": 1, "restraint": 0.85, "jumpRate": 0, "delayFactor": 1 },
-      "Bot Pep": { "kappa": 1, "gamma": 1.25, "restraint": 0.88, "jumpRate": 0.8, "delayFactor": 0.95 },
-      "Bot Arsène": { "kappa": 0.88, "gamma": 1, "restraint": 0.72, "jumpRate": 0.5, "delayFactor": 0.9 }
+      "Bot Zizou": {
+        "kappa": 1.12,
+        "gamma": 1,
+        "restraint": 0.95,
+        "jumpRate": 1.6,
+        "delayFactor": 1.1
+      },
+      "Bot Bielsa": {
+        "kappa": 1,
+        "gamma": 1,
+        "restraint": 0.85,
+        "jumpRate": 0,
+        "delayFactor": 1
+      },
+      "Bot Pep": {
+        "kappa": 1,
+        "gamma": 1.25,
+        "restraint": 0.88,
+        "jumpRate": 0.8,
+        "delayFactor": 0.95
+      },
+      "Bot Arsène": {
+        "kappa": 0.88,
+        "gamma": 1,
+        "restraint": 0.72,
+        "jumpRate": 0.5,
+        "delayFactor": 0.9
+      }
     },
-    "suffixShift": { "kappa": 0.03, "restraint": 0.02 },
+    "suffixShift": {
+      "kappa": 0.03,
+      "restraint": 0.02
+    },
     "jumpFraction": 0.6,
-    "easyIncrementWeights": [0.5, 0.3, 0.2],
+    "easyIncrementWeights": [
+      0.5,
+      0.3,
+      0.2
+    ],
     "faultRenunciationShare": 0.5,
-    "priceMemory": { "min": 1.0, "max": 1.6 },
+    "priceMemory": {
+      "min": 1.0,
+      "max": 1.6
+    },
     "simMaxRounds": 200,
     "levels": {
       "easy": {
-        "kappa": 2,
-        "gamma": 1.5,
+        "kappa": 3,
+        "gamma": 1.0,
         "noise": 0.45,
         "errorRate": 0.25,
         "errorOverbid": 1.5,
-        "selectivity": "fixed",
-        "fixedThreshold": 0.65,
+        "selectivity": "pack",
+        "fixedThreshold": 0.78,
         "smartIncrements": false,
         "jumpRate": 0,
         "readsRivals": false,
         "priceMemory": false,
         "delayMinMs": 1200,
         "delayMaxMs": 3000,
-        "spendFloor": 0.45,
-        "spendFloorAdapts": false
+        "spendFloor": 0.45
       },
       "medium": {
-        "kappa": 2,
-        "gamma": 1.5,
-        "noise": 0.1,
+        "kappa": 3,
+        "gamma": 1.0,
+        "noise": 0.14,
         "errorRate": 0,
         "errorOverbid": 1,
-        "selectivity": "ratio",
-        "fixedThreshold": 0.5,
+        "selectivity": "pool",
+        "fixedThreshold": 0.45,
         "smartIncrements": true,
         "jumpRate": 0.15,
         "readsRivals": false,
         "priceMemory": false,
         "delayMinMs": 600,
         "delayMaxMs": 1800,
-        "spendFloor": 0.25,
-        "spendFloorAdapts": false
+        "spendFloor": 0.3
       },
       "hard": {
-        "kappa": 2,
-        "gamma": 1.5,
+        "kappa": 3,
+        "gamma": 1.0,
         "noise": 0.03,
         "errorRate": 0,
         "errorOverbid": 1,
-        "selectivity": "ratio",
-        "fixedThreshold": 0.5,
+        "selectivity": "pool",
+        "fixedThreshold": 0.45,
         "smartIncrements": true,
         "jumpRate": 0.2,
         "readsRivals": true,
         "priceMemory": true,
         "delayMinMs": 300,
         "delayMaxMs": 900,
-        "spendFloor": 0.28,
-        "spendFloorAdapts": true
+        "spendFloor": 0.22
       }
     }
   },
@@ -93,8 +153,18 @@
     "nameMaxLength": 40,
     "descriptionMaxLength": 200,
     "emojiMaxLength": 8,
-    "positions": { "max": 12, "codeMaxLength": 6, "labelMaxLength": 30 },
-    "cards": { "min": 2, "max": 300, "nameMaxLength": 40, "ratingMin": 1, "ratingMax": 99 }
+    "positions": {
+      "max": 12,
+      "codeMaxLength": 6,
+      "labelMaxLength": 30
+    },
+    "cards": {
+      "min": 2,
+      "max": 300,
+      "nameMaxLength": 40,
+      "ratingMin": 1,
+      "ratingMax": 99
+    }
   },
   "ui": {
     "historyPageSize": 20,
@@ -112,7 +182,12 @@
       "floatMs": 900,
       "urgentMs": 1200,
       "maxPips": 8,
-      "table": { "cardW": 246, "cardH": 316, "laneTop": 66, "startFraction": 0.45 }
+      "table": {
+        "cardW": 246,
+        "cardH": 316,
+        "laneTop": 66,
+        "startFraction": 0.45
+      }
     }
   }
 }

@@ -128,38 +128,59 @@ describe('la hiérarchie des niveaux', () => {
   }
 
   // Marges franches mais sûres, en dessous des taux réellement mesurés avec le
-  // calibrage en place (plancher de dépense + borne basse de la mémoire des prix
-  // à 1,0) : difficile-facile 0,718 (2 joueurs) / 0,730 (8) ; difficile-moyen 0,742
-  // / 0,855 ; moyen-facile 0,720 / 0,672. On exige 0,58 partout sauf moyen-facile à
-  // huit joueurs (0,56), le cas le plus serré.
+  // calibrage en place (kappa 3, gamma 1, plancher de dépense, spendFloorAdapts
+  // retiré) : difficile-facile 0,730 (2 joueurs) / 0,853 (4) / 0,907 (8) ;
+  // difficile-moyen 0,668 / 0,672 / 0,675 ; moyen-facile 0,663 / 0,803 / 0,907.
+  // Le cas le plus serré est difficile-moyen, autour de 0,67 quelle que soit la
+  // taille de table : on exige 0,60 partout, ce qui laisse de la marge sous ce
+  // plancher sans être complaisant.
+  //
+  // La taille 4 (parCamp 2) est celle à laquelle on joue le plus : sans elle, les
+  // niveaux pouvaient devenir quasi indiscernables à cette taille précise sans
+  // qu'aucun test ne le signale.
 
   it('le difficile bat le facile à deux joueurs', () => {
     const [dur] = affrontement('hard', 'easy', 1, 1234)
-    expect(dur).toBeGreaterThan(0.58)
+    expect(dur).toBeGreaterThan(0.6)
+  })
+
+  it('le difficile bat le facile à quatre joueurs', () => {
+    const [dur] = affrontement('hard', 'easy', 2, 1234)
+    expect(dur).toBeGreaterThan(0.6)
   })
 
   it('le difficile bat le facile à huit joueurs', () => {
     const [dur] = affrontement('hard', 'easy', 4, 4321)
-    expect(dur).toBeGreaterThan(0.58)
+    expect(dur).toBeGreaterThan(0.6)
   })
 
   it('le difficile bat le moyen à deux joueurs', () => {
     const [dur] = affrontement('hard', 'medium', 1, 1234)
-    expect(dur).toBeGreaterThan(0.58)
+    expect(dur).toBeGreaterThan(0.6)
+  })
+
+  it('le difficile bat le moyen à quatre joueurs', () => {
+    const [dur] = affrontement('hard', 'medium', 2, 1234)
+    expect(dur).toBeGreaterThan(0.6)
   })
 
   it('le difficile bat le moyen à huit joueurs', () => {
     const [dur] = affrontement('hard', 'medium', 4, 4321)
-    expect(dur).toBeGreaterThan(0.58)
+    expect(dur).toBeGreaterThan(0.6)
   })
 
   it('le moyen bat le facile à deux joueurs', () => {
     const [moyen] = affrontement('medium', 'easy', 1, 1234)
-    expect(moyen).toBeGreaterThan(0.58)
+    expect(moyen).toBeGreaterThan(0.6)
+  })
+
+  it('le moyen bat le facile à quatre joueurs', () => {
+    const [moyen] = affrontement('medium', 'easy', 2, 1234)
+    expect(moyen).toBeGreaterThan(0.6)
   })
 
   it('le moyen bat le facile à huit joueurs', () => {
     const [moyen] = affrontement('medium', 'easy', 4, 4321)
-    expect(moyen).toBeGreaterThan(0.56)
+    expect(moyen).toBeGreaterThan(0.6)
   })
 })
