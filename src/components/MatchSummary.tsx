@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Card, { type CardData } from './Card'
 import PlayerName from './PlayerName'
+import BotBadge from './BotBadge'
 import { useT } from '../hooks/useT'
 import { locale } from '../i18n'
 
@@ -14,6 +15,7 @@ type SummaryPlayer = {
   moneyLeft: number
   result: 'win' | 'loss' | 'draw'
   isBot: boolean
+  botLevel: string | null
 }
 type SummaryCard = { seat: number; price: number; card: CardData & { id: number } }
 type Summary = { finishedAt: string; players: SummaryPlayer[]; cards: SummaryCard[] }
@@ -31,7 +33,7 @@ export default function MatchSummary({ gameId }: { gameId: string }) {
     const load = async () => {
       const { data, error } = await supabase.from('matches')
         .select(`finished_at,
-          match_players(seat, nickname, score, money_left, result, is_bot, profile:profiles(username)),
+          match_players(seat, nickname, score, money_left, result, is_bot, bot_level, profile:profiles(username)),
           match_cards(seat, price_paid, card_id, card_name, card_position, card_rating)`)
         .eq('game_id', gameId)
         .maybeSingle()
@@ -48,6 +50,7 @@ export default function MatchSummary({ gameId }: { gameId: string }) {
             moneyLeft: p.money_left,
             result: p.result as SummaryPlayer['result'],
             isBot: p.is_bot,
+            botLevel: p.bot_level,
           })).sort((a, b) => b.score - a.score || b.moneyLeft - a.moneyLeft),
           cards: (data.match_cards ?? []).map(c => ({
             seat: c.seat,
@@ -106,7 +109,7 @@ export default function MatchSummary({ gameId }: { gameId: string }) {
         <section key={p.seat} className={`result-row${p.result === 'win' ? ' winner' : ''}`}>
           <h2>
             <PlayerName nickname={p.nickname} username={p.username} />
-            {p.isBot && <span className="badge"> {t('common.bot')}</span>}
+            <BotBadge isBot={p.isBot} level={p.botLevel} />
             {' '}{t('common.scoreLine', { score: p.score })}{' '}
             <small>{t('common.moneyLeft', { money: p.moneyLeft })}</small>
           </h2>

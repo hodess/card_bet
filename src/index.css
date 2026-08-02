@@ -238,6 +238,7 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 .public-setup { display: flex; flex-direction: column; gap: 0.7rem; background: var(--bg2); border-radius: 14px; padding: 1rem; }
 .public-setup h2, .board h2 { margin: 0; font-size: 1.05rem; }
 .hint { color: var(--muted); font-size: 0.85rem; margin: 0; }
+.bot-levels { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
 .board { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.5rem; }
 .board-row { display: flex; align-items: center; gap: 0.8rem; background: var(--bg2); border-radius: 12px; padding: 0.7rem 1rem; }
 .board-info { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }

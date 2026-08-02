@@ -3,15 +3,17 @@ import { supabase } from '../lib/supabase'
 import type { GameState } from '../hooks/useGame'
 import GameSettingsFields, { type GameSettings } from './GameSettingsFields'
 import PlayerName from './PlayerName'
+import BotBadge from './BotBadge'
 import { useUsernames } from '../hooks/useUsernames'
 import { usePacks } from '../hooks/usePacks'
 import { errorMessage } from '../lib/errors'
 import { useT } from '../hooks/useT'
 import config from '../config.json'
+import type { BotLevel } from '../lib/botBrain'
 
 export default function Lobby({ state, onAddBot }: {
   state: GameState
-  onAddBot: (code: string, seatedNames: string[]) => void
+  onAddBot: (code: string, seatedNames: string[], level: BotLevel) => void
 }) {
   const { game, players, myPlayerId, refresh } = state
   const { t } = useT()
@@ -92,9 +94,9 @@ export default function Lobby({ state, onAddBot }: {
     else refresh()
   }
 
-  function addBot() {
+  function addBot(level: BotLevel) {
     setBotPending(true)
-    onAddBot(game!.code, players.map(p => p.nickname))
+    onAddBot(game!.code, players.map(p => p.nickname), level)
   }
 
   const canEdit = isHost && isPrivate
@@ -116,6 +118,7 @@ export default function Lobby({ state, onAddBot }: {
           <li key={p.id}>
             <span>
               <PlayerName nickname={p.nickname} username={usernames[p.auth_uid]} />
+              <BotBadge isBot={p.is_bot} level={p.bot_level} />
               {p.seat === 0 && ` ${t('lobby.host')}`}
             </span>
             {isHost && p.id !== myPlayerId && (
@@ -139,9 +142,17 @@ export default function Lobby({ state, onAddBot }: {
       </section>
 
       {isHost && !full && (
-        <button className="secondary" onClick={addBot} disabled={botPending}>
-          {botPending ? t('lobby.botComing') : t('lobby.addBot')}
-        </button>
+        <p className="bot-levels">
+          <span className="hint">{t('lobby.addBotLabel')}</span>{' '}
+          {/* config.bot.levels est la source unique des niveaux ; le cast est sûr,
+              ce sont exactement les clés que botBrain.ts type en BotLevel */}
+          {(Object.keys(config.bot.levels) as BotLevel[]).map(level => (
+            <button key={level} className="secondary" onClick={() => addBot(level)}
+              disabled={botPending} title={t('lobby.addBot')}>
+              {botPending ? t('lobby.botComing') : t(`bot.level.${level}`)}
+            </button>
+          ))}
+        </p>
       )}
       {isHost
         ? <button onClick={start} disabled={players.length < 2}>{t('lobby.start')}</button>

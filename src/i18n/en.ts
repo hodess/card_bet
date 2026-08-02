@@ -11,6 +11,11 @@ export const en: Record<string, string> = {
   'common.scoreLine': '— {score} pts',
   'common.moneyLeft': '({money} € left)',
 
+  // --- bot levels ---
+  'bot.level.easy': 'Easy',
+  'bot.level.medium': 'Medium',
+  'bot.level.hard': 'Hard',
+
   // --- navigation ---
   'nav.menu': 'Menu',
   'nav.home': 'Home',
@@ -126,6 +131,7 @@ export const en: Record<string, string> = {
   'lobby.saving': 'Saving…',
   'lobby.saveSettings': 'Save settings',
   'lobby.addBot': '+ Add a bot',
+  'lobby.addBotLabel': 'Add a bot:',
   'lobby.botComing': 'Bot on its way…',
   'lobby.start': 'Start',
   'lobby.waitingHost': 'Waiting for the host…',
@@ -252,6 +258,7 @@ export const en: Record<string, string> = {
   'errors.TOO_MANY_PACKS': 'You have reached the maximum number of packs.',
   'errors.PACK_DELETED': 'This game’s pack was deleted. Pick another one.',
   'errors.PACK_NOT_OWNED_BY_HOST': 'Only the author of a private pack can host a game with it.',
+  'errors.BOT_LEVEL_INVALID': 'Unknown bot level.',
   'errors.PLAYER_NOT_FOUND': 'Player not found.',
   'errors.SELF_FRIENDSHIP': 'You cannot add yourself.',
   'errors.ALREADY_FRIENDS': 'You are already friends.',

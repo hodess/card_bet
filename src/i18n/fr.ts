@@ -12,6 +12,11 @@ export const fr: Record<string, string> = {
   'common.scoreLine': '— {score} pts',
   'common.moneyLeft': '(reste {money} €)',
 
+  // --- niveaux de bot ---
+  'bot.level.easy': 'Facile',
+  'bot.level.medium': 'Moyen',
+  'bot.level.hard': 'Difficile',
+
   // --- navigation ---
   'nav.menu': 'Menu',
   'nav.home': 'Accueil',
@@ -127,6 +132,7 @@ export const fr: Record<string, string> = {
   'lobby.saving': 'Enregistrement…',
   'lobby.saveSettings': 'Enregistrer les réglages',
   'lobby.addBot': '+ Ajouter un bot',
+  'lobby.addBotLabel': 'Ajouter un bot :',
   'lobby.botComing': 'Bot en route…',
   'lobby.start': 'Démarrer',
   'lobby.waitingHost': 'En attente de l’hôte…',
@@ -253,6 +259,7 @@ export const fr: Record<string, string> = {
   'errors.TOO_MANY_PACKS': 'Tu as atteint le nombre maximum de packs.',
   'errors.PACK_DELETED': 'Le pack de cette partie a été supprimé. Choisis-en un autre.',
   'errors.PACK_NOT_OWNED_BY_HOST': 'Seul l’auteur d’un pack privé peut héberger une partie avec.',
+  'errors.BOT_LEVEL_INVALID': 'Niveau de bot inconnu.',
   'errors.PLAYER_NOT_FOUND': 'Joueur introuvable.',
   'errors.SELF_FRIENDSHIP': 'Tu ne peux pas t’ajouter toi-même.',
   'errors.ALREADY_FRIENDS': 'Vous êtes déjà amis.',
