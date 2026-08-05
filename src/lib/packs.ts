@@ -20,20 +20,101 @@ export type PackInput = {
   cards: PackCardInput[]
 }
 export type OfficialPack = PackInput & { slug: string; sortOrder: number }
-export type PackError = { key: string; params?: Record<string, string | number> }
+// `card` situe une erreur sur une carte sans l'interpoler dans le message : le
+// même message sert sous une ligne de l'éditeur (où la ligne est déjà visible)
+// et dans un récapitulatif d'import (où il faut nommer la carte).
+export type PackError = {
+  key: string
+  params?: Record<string, string | number>
+  card?: number
+}
 
-const CHAMPS_PACK = ['name', 'emoji', 'description', 'positions', 'cards'] as const
+export const CHAMPS_PACK = ['name', 'emoji', 'description', 'positions', 'cards'] as const
 const CHAMPS_PACK_OFFICIEL = [...CHAMPS_PACK, 'slug', 'sortOrder'] as const
 const CHAMPS_CARTE = ['name', 'position', 'rating'] as const
 
-const texte = (v: unknown): v is string => typeof v === 'string'
-const estObjet = (v: unknown): v is Record<string, unknown> =>
+// Gardes de lecture exportées : `packDraft.ts` lit le même JSON tolérant que
+// `parsePackJson`, il a besoin des mêmes primitives.
+export const texte = (v: unknown): v is string => typeof v === 'string'
+// Lecture tolérante d'un champ texte : ce qui n'est pas une chaîne devient une
+// chaîne vide, que les vérificateurs signaleront. Cinq appelants dans
+// packDraft.ts, d'où la factorisation.
+export const chaine = (v: unknown): string => (texte(v) ? v : '')
+export const estObjet = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 // Postgres compte des caractères (char_length), pas des unités UTF-16 : un
 // emoji en occupe deux en JS. Sans ce comptage, l'éditeur refuserait un pack
 // que le serveur accepte.
 const taille = (s: string) => [...s].length
 const borne = (s: string, max: number) => taille(s) >= 1 && taille(s) <= max
+
+// --- Vérificateurs -----------------------------------------------------------
+// Une règle = une fonction pure rendant `PackError | null`. C'est l'autorité
+// unique du format : `parsePackJson` (voie JSON) et `packDraft.ts` (voie éditeur)
+// les appellent tous les deux, donc aucune règle ne peut dériver entre les deux.
+// Ils ne connaissent AUCUN numéro de carte : le localisateur `card` est ajouté
+// par l'appelant qui, lui, sait où il en est.
+
+export function checkName(v: string): PackError | null {
+  return borne(v.trim(), L.nameMaxLength)
+    ? null : { key: 'packError.name', params: { max: L.nameMaxLength } }
+}
+
+export function checkEmoji(v: string): PackError | null {
+  return taille(v) <= L.emojiMaxLength
+    ? null : { key: 'packError.emoji', params: { max: L.emojiMaxLength } }
+}
+
+export function checkDescription(v: string): PackError | null {
+  return taille(v) <= L.descriptionMaxLength
+    ? null : { key: 'packError.description', params: { max: L.descriptionMaxLength } }
+}
+
+export function checkPositionsCount(n: number): PackError | null {
+  return n >= 1 && n <= L.positions.max
+    ? null : { key: 'packError.positions', params: { max: L.positions.max } }
+}
+
+export function checkPositionCode(code: string): PackError | null {
+  return borne(code, L.positions.codeMaxLength)
+    ? null : { key: 'packError.positionCode', params: { code, max: L.positions.codeMaxLength } }
+}
+
+export function checkPositionLabel(code: string, label: string): PackError | null {
+  return borne(label.trim(), L.positions.labelMaxLength)
+    ? null : { key: 'packError.positionLabel', params: { code, max: L.positions.labelMaxLength } }
+}
+
+export function checkCardsCount(n: number): PackError | null {
+  return n >= L.cards.min && n <= L.cards.max
+    ? null : { key: 'packError.cardsCount', params: { min: L.cards.min, max: L.cards.max } }
+}
+
+export function checkCardName(name: string): PackError | null {
+  return borne(name.trim(), L.cards.nameMaxLength)
+    ? null : { key: 'packError.cardName', params: { max: L.cards.nameMaxLength } }
+}
+
+// `dejaPris` = les noms qui font de celui-ci un doublon. Deux appelants, deux
+// façons de le remplir : `parsePackJson` y met les noms des cartes DÉJÀ lues
+// (seule la seconde occurrence est fautive, comme aujourd'hui) ; `validateDraft`
+// y met les noms présents plus d'une fois (toutes les cartes concernées sont
+// alors signalées, ce qui est ce qu'on veut voir dans une liste).
+export function checkCardDuplicate(name: string, dejaPris: ReadonlySet<string>): PackError | null {
+  return dejaPris.has(name.trim()) ? { key: 'packError.cardDuplicateName' } : null
+}
+
+export function checkCardPosition(position: unknown, codes: readonly string[]): PackError | null {
+  return texte(position) && codes.includes(position)
+    ? null : { key: 'packError.cardUnknownPosition', params: { position: String(position) } }
+}
+
+export function checkCardRating(rating: unknown): PackError | null {
+  return Number.isInteger(rating)
+      && (rating as number) >= L.cards.ratingMin
+      && (rating as number) <= L.cards.ratingMax
+    ? null : { key: 'packError.cardRating', params: { min: L.cards.ratingMin, max: L.cards.ratingMax } }
+}
 
 function parse(text: string, champsConnus: readonly string[]):
   { brut: Record<string, unknown> | null; errors: PackError[] } {
@@ -51,26 +132,29 @@ function parse(text: string, champsConnus: readonly string[]):
 }
 
 function corps(brut: Record<string, unknown>, errors: PackError[]): PackInput | null {
-  // name
-  const nom = texte(brut.name) ? brut.name.trim() : ''
-  if (!borne(nom, L.nameMaxLength)) {
-    errors.push({ key: 'packError.name', params: { max: L.nameMaxLength } })
-  }
+  const pousser = (e: PackError | null) => { if (e) errors.push(e) }
 
-  // emoji et description : facultatifs
+  const nom = texte(brut.name) ? brut.name.trim() : ''
+  pousser(checkName(nom))
+
+  // emoji et description : facultatifs, mais typés — un non-texte est une faute,
+  // pas un vide, et les vérificateurs n'acceptent que des chaînes.
   const emoji = brut.emoji === undefined ? '' : texte(brut.emoji) ? brut.emoji : null
-  if (emoji === null || taille(emoji) > L.emojiMaxLength) {
-    errors.push({ key: 'packError.emoji', params: { max: L.emojiMaxLength } })
-  }
+  if (emoji === null) errors.push({ key: 'packError.emoji', params: { max: L.emojiMaxLength } })
+  else pousser(checkEmoji(emoji))
   const desc = brut.description === undefined ? '' : texte(brut.description) ? brut.description : null
-  if (desc === null || taille(desc) > L.descriptionMaxLength) {
-    errors.push({ key: 'packError.description', params: { max: L.descriptionMaxLength } })
-  }
+  if (desc === null) errors.push({ key: 'packError.description', params: { max: L.descriptionMaxLength } })
+  else pousser(checkDescription(desc))
 
   // positions
-  const codes = estObjet(brut.positions) ? Object.keys(brut.positions) : []
-  if (!estObjet(brut.positions) || codes.length < 1 || codes.length > L.positions.max) {
+  if (!estObjet(brut.positions)) {
     errors.push({ key: 'packError.positions', params: { max: L.positions.max } })
+    return null
+  }
+  const codes = Object.keys(brut.positions)
+  const compte = checkPositionsCount(codes.length)
+  if (compte) {
+    errors.push(compte)
     // vocabulaire structurellement invalide : inutile d'analyser les cartes,
     // qui produiraient chacune un cardUnknownPosition — jusqu'à 300 messages
     // pour cette seule faute.
@@ -78,55 +162,49 @@ function corps(brut: Record<string, unknown>, errors: PackError[]): PackInput | 
   }
   const positions: Record<string, string> = {}
   for (const code of codes) {
-    if (!borne(code, L.positions.codeMaxLength)) {
-      errors.push({ key: 'packError.positionCode', params: { code, max: L.positions.codeMaxLength } })
-      continue
-    }
-    const libelle = (brut.positions as Record<string, unknown>)[code]
-    if (!texte(libelle) || !borne(libelle.trim(), L.positions.labelMaxLength)) {
+    const eCode = checkPositionCode(code)
+    if (eCode) { errors.push(eCode); continue }
+    const libelle = brut.positions[code]
+    if (!texte(libelle)) {
       errors.push({ key: 'packError.positionLabel', params: { code, max: L.positions.labelMaxLength } })
       continue
     }
+    const eLibelle = checkPositionLabel(code, libelle)
+    if (eLibelle) { errors.push(eLibelle); continue }
     positions[code] = libelle.trim()
   }
 
   // cards
-  if (!Array.isArray(brut.cards) || brut.cards.length < L.cards.min || brut.cards.length > L.cards.max) {
+  if (!Array.isArray(brut.cards)) {
     errors.push({ key: 'packError.cardsCount', params: { min: L.cards.min, max: L.cards.max } })
     return null
   }
+  const compteCartes = checkCardsCount(brut.cards.length)
+  if (compteCartes) { errors.push(compteCartes); return null }
 
+  const codesValides = Object.keys(positions)
   const cards: PackCardInput[] = []
   const vus = new Set<string>()
   brut.cards.forEach((c, index) => {
-    if (!estObjet(c)) { errors.push({ key: 'packError.cardNotObject', params: { index } }); return }
+    // Toute erreur de carte porte son localisateur, jamais son numéro dans le
+    // message : c'est ce qui rend ces messages affichables sous une ligne.
+    const surCarte = (e: PackError | null) => { if (e) errors.push({ ...e, card: index }) }
+    if (!estObjet(c)) { surCarte({ key: 'packError.cardNotObject' }); return }
     for (const k of Object.keys(c)) {
       if (!CHAMPS_CARTE.includes(k as typeof CHAMPS_CARTE[number])) {
-        errors.push({ key: 'packError.cardUnknownField', params: { index, field: k } })
+        surCarte({ key: 'packError.unknownField', params: { field: k } })
       }
     }
-    let valide = true
-    const n = texte(c.name) ? c.name.trim() : ''
-    if (!borne(n, L.cards.nameMaxLength)) {
-      errors.push({ key: 'packError.cardName', params: { index, max: L.cards.nameMaxLength } }); valide = false
-    } else if (vus.has(n)) {
-      errors.push({ key: 'packError.cardDuplicateName', params: { index, name: n } }); valide = false
-    }
-    if (!texte(c.position) || !(c.position in positions)) {
-      errors.push({ key: 'packError.cardUnknownPosition', params: { index, position: String(c.position) } })
-      valide = false
-    }
-    if (!Number.isInteger(c.rating)
-        || (c.rating as number) < L.cards.ratingMin || (c.rating as number) > L.cards.ratingMax) {
-      errors.push({
-        key: 'packError.cardRating',
-        params: { index, min: L.cards.ratingMin, max: L.cards.ratingMax },
-      })
-      valide = false
-    }
-    if (!valide) return
-    vus.add(n)
-    cards.push({ name: n, position: c.position as string, rating: c.rating as number })
+    const nomCarte = texte(c.name) ? c.name : ''
+    const eNom = checkCardName(nomCarte) ?? checkCardDuplicate(nomCarte, vus)
+    surCarte(eNom)
+    const ePos = checkCardPosition(c.position, codesValides)
+    surCarte(ePos)
+    const eNote = checkCardRating(c.rating)
+    surCarte(eNote)
+    if (eNom || ePos || eNote) return
+    vus.add(nomCarte.trim())
+    cards.push({ name: nomCarte.trim(), position: c.position as string, rating: c.rating as number })
   })
 
   if (errors.length > 0) return null

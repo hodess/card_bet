@@ -499,33 +499,199 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 .btn-ghost.danger:hover { border-color: var(--danger); color: var(--danger); }
 
 /* ----- éditeur de pack ----- */
-/* L'éditeur est le seul écran large du jeu : il desserre le gabarit mobile
-   de #root pour lui seul, via :has(). Partout ailleurs, rien ne change. */
-#root:has(.pack-editor) { max-width: 1100px; }
+/* L'éditeur est redevenu un écran mobile comme les autres : plus d'exception de
+   gabarit sur #root, plus de deux-panneaux JSON | aperçu. */
 
-.pack-editor { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
-.pack-editor-pane { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
-/* .pack-actions sert aussi aux boutons Éditer/Public-Privé/Supprimer de
-   /packs (PackSection) : on ne grossit que ceux de la page d'édition, qui
-   partage le même conteneur `.page` que `.pack-editor` mais pas le même
-   ancêtre direct. Cette règle suppose que `.pack-actions` reste dans le
-   même `<main className="page">` que `.pack-editor` (PackEditorPage) : si
-   une refactorisation les sépare, elle cesse silencieusement de s'appliquer
-   — rien ne casse visuellement, mais les boutons de l'éditeur reviennent à
-   la taille par défaut de `.btn-ghost`. */
-.page:has(.pack-editor) .pack-actions button { padding: 0.5rem 0.9rem; font-size: 0.9rem; }
-.pack-json {
-  width: 100%; min-height: 60vh; resize: vertical;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.82rem; line-height: 1.5;
-  background: var(--bg2); color: var(--text);
-  border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem;
-  tab-size: 2;
+/* Le burger de navigation et le sélecteur de langue sont `position: fixed` en
+   haut de l'écran avec un z-index positif : sans cette gouttière, ils
+   recouvrent le `‹` et le bouton Enregistrer de l'en-tête, qui deviennent
+   intapotables — et le `‹` est la seule sortie qui protège la saisie. */
+.page:has(.editor-head) { padding-top: 3rem; }
+
+.editor-head { position: relative; display: flex; align-items: center; gap: 0.6rem; }
+.editor-head .editor-title { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.editor-head .editor-title strong {
+  font-size: 1rem; font-weight: 800;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.pack-json:focus { outline: none; border-color: var(--accent); }
-.pack-errors ul { margin: 0.2rem 0 0; padding-left: 1.1rem; }
-.pack-errors li { font-size: 0.82rem; }
-@media (max-width: 820px) {
-  .pack-editor { grid-template-columns: 1fr; }
-  .pack-json { min-height: 40vh; }
+.editor-head .editor-title span { font-size: 0.7rem; color: var(--muted); }
+.editor-icon {
+  width: 34px; height: 34px; flex-shrink: 0; padding: 0; border-radius: 10px;
+  background: var(--bg2); color: var(--text); border: 1px solid #2c3654;
 }
+
+/* menu ⋯ : pop-over ancré sur l'en-tête, au-dessus de l'overlay comme le drawer */
+.editor-menu {
+  position: absolute; top: 3rem; right: 0; z-index: 61; width: 216px;
+  display: flex; flex-direction: column; padding: 6px;
+  background: var(--surface); border: 1px solid #2c3654; border-radius: 14px;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.6);
+}
+.editor-menu-group {
+  padding: 8px 10px 6px; font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+}
+.editor-menu button {
+  text-align: left; background: transparent; border: none; color: var(--text);
+  padding: 9px 10px; border-radius: 9px; font-size: 0.87rem; font-weight: 500;
+}
+.editor-menu button:hover { background: var(--bg2); }
+
+/* chips de position : filtre de la liste ET choix dans la feuille de saisie */
+.pos-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.pos-chip {
+  padding: 6px 11px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
+  background: transparent; color: var(--muted); border: 1px solid #2c3654;
+}
+.pos-chip.on { background: var(--accent); color: #0d1321; border-color: var(--accent); }
+.pos-chip.add { border-style: dashed; }
+
+/* la liste des cartes */
+.card-rows { display: flex; flex-direction: column; gap: 6px; }
+.card-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: var(--bg2); border: 1px solid transparent; border-radius: 12px;
+  padding: 9px 10px; color: var(--text);
+}
+.card-row.bad { border-color: var(--danger); }
+.card-row .row-rating {
+  display: grid; place-items: center; width: 34px; height: 34px; flex-shrink: 0;
+  border-radius: 8px; font-size: 0.95rem; font-weight: 900; color: #201703;
+  font-variant-numeric: tabular-nums;
+}
+.card-row .row-rating.gold   { background: linear-gradient(160deg, var(--gold1), var(--gold2)); }
+.card-row .row-rating.silver { background: linear-gradient(160deg, var(--silver1), var(--silver2)); }
+.card-row .row-rating.bronze { background: linear-gradient(160deg, var(--bronze1), var(--bronze2)); }
+.card-row .row-rating.empty {
+  background: transparent; border: 1px dashed #2c3654; color: var(--muted); font-weight: 700;
+}
+.card-row .row-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.card-row .row-name {
+  font-size: 0.88rem; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.card-row .row-sub { font-size: 0.7rem; color: var(--muted); }
+.card-row .row-sub.bad { color: var(--danger); }
+
+/* barre basse : récapitulatif d'erreurs + action principale */
+.editor-foot {
+  position: sticky; bottom: 0; display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 0 0;
+  background: linear-gradient(to top, var(--bg) 60%, transparent);
+}
+.error-summary {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--danger);
+  border-radius: 12px; padding: 8px 10px;
+}
+.error-summary strong { font-size: 0.75rem; font-weight: 700; color: var(--danger); }
+.error-summary span { font-size: 0.75rem; color: var(--muted); flex: 1; }
+.error-summary > button {
+  background: transparent; border: none; padding: 0;
+  font-size: 0.75rem; font-weight: 700; color: var(--danger);
+}
+.error-list { display: flex; flex-direction: column; gap: 2px; padding: 0 10px 4px; }
+.error-list button {
+  background: transparent; border: none; padding: 0; text-align: left;
+  font-size: 0.78rem; color: var(--danger); text-decoration: underline;
+}
+.editor-add { width: 100%; border-radius: 999px; padding: 15px 0; font-size: 0.95rem; font-weight: 800; }
+
+/* panneau plein écran (feuille de carte, positions, réglages) */
+/* `.sheet-panel` et non `.sheet` : `Card` émet `fut-card sheet` pour sa taille
+   d'aperçu, et un sélecteur `.sheet` nu matcherait la carte rendue DANS ce
+   panneau — elle héritait alors de position:fixed et devenait plein écran. */
+.sheet-panel {
+  position: fixed; inset: 0; z-index: 61; margin: 0 auto; max-width: 480px;
+  display: flex; flex-direction: column; background: var(--bg);
+  border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+}
+.sheet-bar {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 0.5rem; padding: 0.8rem 1rem;
+}
+.sheet-bar strong { font-size: 1rem; font-weight: 800; text-align: center; }
+.sheet-bar button { font-size: 0.82rem; }
+.sheet-bar button:first-child { justify-self: start; color: var(--muted); }
+.sheet-bar button.accent { justify-self: end; color: var(--accent); font-weight: 700; }
+.sheet-bar button.accent:disabled { opacity: 0.4; }
+.sheet-body {
+  flex: 1; overflow-y: auto; padding: 0 1rem 1.5rem;
+  display: flex; flex-direction: column; gap: 0.9rem;
+}
+
+/* champ de l'éditeur : label court en capitales au-dessus du contrôle */
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field > .field-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;
+}
+.field label, .field .field-name {
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted);
+}
+.field .field-hint { font-size: 0.7rem; color: var(--muted); }
+.field input, .field textarea { width: 100%; }
+.field textarea {
+  background: var(--bg2); color: var(--text); border: 1px solid #2c3654;
+  border-radius: 10px; padding: 0.7rem; font-size: 0.9rem; font-family: inherit;
+  min-height: 62px; resize: vertical;
+}
+.field .error { font-size: 0.75rem; }
+
+/* le curseur de note et ses trois bandes de palier.
+   --tiers est injecté par RatingSlider depuis config.packs.cards.tiers : les
+   bornes des bandes sont la même règle que celle lue par cardTier. */
+.rating-row { display: flex; align-items: center; gap: 10px; }
+.rating-step {
+  width: 44px; height: 44px; flex-shrink: 0; padding: 0; border-radius: 12px;
+  background: var(--bg2); color: var(--text); border: 1px solid #2c3654;
+  font-size: 1.15rem; font-weight: 800;
+}
+.rating-track { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.rating-track input[type='range'] {
+  width: 100%; height: 6px; padding: 0; border: none; border-radius: 999px;
+  appearance: none; background: var(--tiers);
+}
+.rating-track input[type='range']::-webkit-slider-thumb {
+  appearance: none; width: 18px; height: 18px; border-radius: 999px; border: none;
+  background: var(--text); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.rating-track input[type='range']::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 999px; border: none;
+  background: var(--text); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.rating-bands {
+  display: flex; justify-content: space-between;
+  font-size: 0.62rem; font-weight: 700; color: var(--muted);
+}
+
+/* lignes du panneau Positions */
+.pos-rows { display: flex; flex-direction: column; gap: 8px; }
+.pos-row {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg2); border: 1px solid transparent; border-radius: 12px; padding: 8px 10px;
+}
+.pos-row.bad { border-color: var(--danger); }
+.pos-row input.pos-code {
+  width: 74px; flex-shrink: 0; padding: 0.5rem; text-align: center;
+  font-weight: 800; color: var(--accent);
+}
+.pos-row input.pos-label { flex: 1; min-width: 0; padding: 0.5rem; font-size: 0.9rem; }
+.pos-row .pos-count { font-size: 0.7rem; color: var(--muted); flex-shrink: 0; }
+
+/* bascule Privé | Public */
+.segmented {
+  display: flex; background: var(--bg2); border: 1px solid #2c3654;
+  border-radius: 999px; padding: 3px;
+}
+.segmented button {
+  flex: 1; padding: 9px 0; border-radius: 999px; border: none;
+  background: transparent; color: var(--muted); font-size: 0.8rem; font-weight: 700;
+}
+.segmented button.on { background: var(--accent); color: #0d1321; font-weight: 800; }
+
+/* la carte à mi-taille de la feuille de saisie */
+.fut-card.sheet { width: 148px; border-radius: 16px; padding: 0.75rem; }
+.fut-card.sheet .fut-rating { font-size: 1.9rem; top: 0.5rem; left: 0.7rem; }
+.fut-card.sheet .fut-position { font-size: 0.75rem; top: 2.5rem; left: 0.75rem; }
+.fut-card.sheet .fut-name { font-size: 0.95rem; }

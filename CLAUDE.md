@@ -77,8 +77,14 @@ type, a été rattrapée.
   réseau (exceptions actées : `FriendButton`, `MatchHistoryList`).
 - `src/hooks/` : état partagé/realtime (`useGame`, `useProfile`, `useFriendships`…).
 - `src/lib/` : fonctions pures et accès Supabase (`game.ts`, `gameApi.ts`,
-  `errors.ts`, `auth.ts`, `packs.ts` le format et la validation d'un pack,
-  `packsApi.ts` les appels RPC associés, `bot.ts` le runtime des bots,
+  `errors.ts`, `auth.ts`, `packs.ts` l'autorité unique du format et de la
+  validation d'un pack — ses règles sont des vérificateurs purs (`checkName`,
+  `checkCardRating`, `checkCardDuplicate`…) appelés par deux entrées, l'import
+  JSON et `packDraft.ts`, la même garde que « Une seule migration fait
+  autorité sur une fonction donnée » ci-dessus mais côté format de pack —,
+  `packsApi.ts` les appels RPC associés, `packDraft.ts` l'état d'édition d'un
+  pack et ses diagnostics (erreurs ancrées par carte et par champ, import
+  tolérant, vocabulaire de positions), `bot.ts` le runtime des bots,
   `botBrain.ts` leur logique de décision, `botNames.ts` leurs noms et
   tempéraments, `botSim.ts` le banc d'essai qui calibre les niveaux).
   `packs.ts` est le **seul** module de `lib/` partagé avec un script Node
@@ -91,8 +97,11 @@ type, a été rattrapée.
   des motifs `{var}`, sans singleton ni DOM — c'est lui que réutilise
   `scripts/build-cards.ts`.
 - `src/config.json` : tout le paramétrage (défauts de partie, bot, section `ui`
-  pour les constantes d'interface). **Pas de nombre magique dans le code.**
-  Ne pas réorganiser ce fichier sans demander.
+  pour les constantes d'interface). `packs.cards.tiers` porte les seuils de
+  palier or/argent/bronze, lus à la fois par `cardTier` (`src/lib/game.ts`) et
+  par le curseur de note de l'éditeur de pack — même seuils partout.
+  **Pas de nombre magique dans le code.** Ne pas réorganiser ce fichier sans
+  demander.
 
 ## Règles de clean code
 
