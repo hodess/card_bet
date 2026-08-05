@@ -18,7 +18,9 @@ notes l'emporte. Monnaie 100 % virtuelle, parties de quelques minutes.
 
 Le pack de cartes se choisit à la création de la partie (et se change dans le
 salon) sur `/packs` : packs officiels, packs publiés par la communauté, ou un
-pack perso créé dans l'éditeur JSON avec aperçu en direct (`/packs/nouveau`).
+pack perso créé dans l'éditeur de pack, une interface de saisie carte par
+carte avec aperçu FUT en direct (`/packs/nouveau`) — le JSON reste possible en
+import/export pour les gros packs.
 
 Règles complètes et versionnées : [`RULES.md`](RULES.md).
 

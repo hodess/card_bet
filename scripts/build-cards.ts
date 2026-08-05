@@ -20,7 +20,10 @@ const MIGRATIONS = join(RACINE, 'supabase/migrations')
 // Le dictionnaire français directement, pas le singleton i18n : ce CLI est un
 // outil de dev français, et le singleton importerait src/i18n/index.ts, qui
 // référence `document` — indésirable dans le projet TypeScript des scripts.
-const rendre = (e: PackError) => interpolate(fr[e.key] ?? e.key, e.params)
+// Le numéro de carte n'est plus dans le message : c'est ici qu'on le compose,
+// comme on compose déjà le nom du fichier.
+const rendre = (e: PackError) =>
+  (e.card === undefined ? '' : `carte ${e.card} : `) + interpolate(fr[e.key] ?? e.key, e.params)
 
 function charger(): OfficialPack[] {
   const fichiers = readdirSync(DOSSIER_PACKS).filter(f => f.endsWith('.json')).sort()

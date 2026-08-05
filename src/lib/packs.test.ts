@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  checkCardDuplicate, checkCardName, checkCardPosition, checkCardRating, checkCardsCount,
+  checkDescription, checkEmoji, checkName, checkPositionCode, checkPositionLabel,
+  checkPositionsCount,
   formatPackJson, installSql, parseOfficialPackJson, parsePackJson, seedSql,
   validateOfficialPacks, type OfficialPack, type PackError, type PackInput,
 } from './packs'
@@ -16,6 +19,95 @@ const PACK: PackInput = {
 }
 const json = (o: unknown) => JSON.stringify(o)
 const cles = (errors: { key: string }[]) => errors.map(e => e.key)
+
+describe('vérificateurs', () => {
+  it('checkName borne le nom du pack sur sa forme rognée', () => {
+    expect(checkName('Mon pack')).toBeNull()
+    expect(checkName('  ')?.key).toBe('packError.name')
+    expect(checkName('x'.repeat(41))?.key).toBe('packError.name')
+    expect(checkName('x'.repeat(40))).toBeNull()
+  })
+
+  it('checkEmoji et checkDescription acceptent le vide (champs facultatifs)', () => {
+    expect(checkEmoji('')).toBeNull()
+    expect(checkDescription('')).toBeNull()
+    expect(checkEmoji('🌀🌀🌀🌀🌀')).toBeNull() // 5 caractères, pas 10 unités UTF-16
+    expect(checkEmoji('x'.repeat(9))?.key).toBe('packError.emoji')
+    expect(checkDescription('x'.repeat(201))?.key).toBe('packError.description')
+  })
+
+  it('checkPositionsCount exige de 1 à 12 positions', () => {
+    expect(checkPositionsCount(0)?.key).toBe('packError.positions')
+    expect(checkPositionsCount(1)).toBeNull()
+    expect(checkPositionsCount(12)).toBeNull()
+    expect(checkPositionsCount(13)?.key).toBe('packError.positions')
+  })
+
+  it('checkPositionCode et checkPositionLabel bornent le vocabulaire', () => {
+    expect(checkPositionCode('ATT')).toBeNull()
+    expect(checkPositionCode('')?.key).toBe('packError.positionCode')
+    expect(checkPositionCode('TROPLONG')?.key).toBe('packError.positionCode')
+    expect(checkPositionLabel('A', 'Attaquant')).toBeNull()
+    expect(checkPositionLabel('A', '  ')?.key).toBe('packError.positionLabel')
+    // le code voyage dans les params : le message le nomme
+    expect(checkPositionLabel('A', '')?.params?.code).toBe('A')
+  })
+
+  it('checkCardsCount exige de 2 à 300 cartes', () => {
+    expect(checkCardsCount(1)?.key).toBe('packError.cardsCount')
+    expect(checkCardsCount(2)).toBeNull()
+    expect(checkCardsCount(300)).toBeNull()
+    expect(checkCardsCount(301)?.key).toBe('packError.cardsCount')
+  })
+
+  it('checkCardName borne le nom sur sa forme rognée', () => {
+    expect(checkCardName('  Dracaufeu  ')).toBeNull()
+    expect(checkCardName('   ')?.key).toBe('packError.cardName')
+    expect(checkCardName('x'.repeat(41))?.key).toBe('packError.cardName')
+  })
+
+  it('checkCardDuplicate compare sur la forme rognée', () => {
+    const pris = new Set(['Dracaufeu'])
+    expect(checkCardDuplicate('  Dracaufeu  ', pris)?.key).toBe('packError.cardDuplicateName')
+    expect(checkCardDuplicate('Tortank', pris)).toBeNull()
+    expect(checkCardDuplicate('Dracaufeu', new Set())).toBeNull()
+  })
+
+  it('checkCardPosition exige un code du vocabulaire', () => {
+    expect(checkCardPosition('FEU', ['FEU', 'EAU'])).toBeNull()
+    expect(checkCardPosition('SAN', ['FEU'])?.key).toBe('packError.cardUnknownPosition')
+    expect(checkCardPosition(undefined, ['FEU'])?.params?.position).toBe('undefined')
+  })
+
+  it('checkCardPosition refuse un nom hérité d’Object.prototype', () => {
+    // L'ancienne implémentation utilisait `position in positions`, qui remonte la
+    // chaîne de prototype et acceptait donc ces noms. Le serveur, lui, teste
+    // l'appartenance avec l'opérateur `?` de Postgres, qui ne voit que les clés
+    // réelles : c'est ce comportement-ci qui est aligné.
+    for (const herite of ['constructor', 'toString', 'hasOwnProperty', '__proto__']) {
+      expect(checkCardPosition(herite, ['FEU'])?.key).toBe('packError.cardUnknownPosition')
+    }
+  })
+
+  it('checkCardRating exige un entier de 1 à 99', () => {
+    expect(checkCardRating(50)).toBeNull()
+    expect(checkCardRating(1)).toBeNull()
+    expect(checkCardRating(99)).toBeNull()
+    for (const mauvais of [0, 100, 91.5, '91', null, undefined, NaN]) {
+      expect(checkCardRating(mauvais)?.key).toBe('packError.cardRating')
+    }
+  })
+
+  it('aucun vérificateur n’interpole de numéro de carte dans son message', () => {
+    const erreurs = [
+      checkCardName(''), checkCardRating(0), checkCardPosition('X', []),
+      checkCardDuplicate('a', new Set(['a'])),
+    ]
+    // `?? {}` : checkCardDuplicate ne pose pas de `params` du tout, et
+    // `toHaveProperty` ne s'appelle pas sur `undefined`.
+    for (const e of erreurs) expect(e?.params ?? {}).not.toHaveProperty('index')
+  })
+})
 
 describe('parsePackJson', () => {
   it('accepte un pack valide', () => {
@@ -50,7 +142,9 @@ describe('parsePackJson', () => {
   it('rejette un champ inconnu au niveau d’une carte', () => {
     const cards = [{ ...PACK.cards[0], stats: { pac: 97 } }, PACK.cards[1]]
     const { errors } = parsePackJson(json({ ...PACK, cards }))
-    expect(cles(errors)).toContain('packError.cardUnknownField')
+    // même clé qu'au niveau du pack : c'est le localisateur qui distingue
+    expect(cles(errors)).toContain('packError.unknownField')
+    expect(errors[0].card).toBe(0)
   })
 
   it('rejette un nom de pack vide ou trop long', () => {
@@ -110,14 +204,14 @@ describe('parsePackJson', () => {
   it('rejette une carte qui n’est pas un objet', () => {
     const { errors } = parsePackJson(json({ ...PACK, cards: ['pas un objet', PACK.cards[1]] }))
     expect(cles(errors)).toContain('packError.cardNotObject')
-    expect(errors[0].params?.index).toBe(0)
+    expect(errors[0].card).toBe(0)
   })
 
   it('rejette une position de carte hors du vocabulaire', () => {
     const cards = [{ name: 'X', position: 'SAN', rating: 50 }, PACK.cards[1]]
     const { errors } = parsePackJson(json({ ...PACK, cards }))
     expect(cles(errors)).toContain('packError.cardUnknownPosition')
-    expect(errors[0].params?.index).toBe(0)
+    expect(errors[0].card).toBe(0)
     expect(errors[0].params?.position).toBe('SAN')
   })
 
@@ -142,7 +236,14 @@ describe('parsePackJson', () => {
   it("situe l'erreur sur la bonne carte", () => {
     const cards = [PACK.cards[0], { ...PACK.cards[1], rating: 200 }]
     const { errors } = parsePackJson(json({ ...PACK, cards }))
-    expect(errors[0].params?.index).toBe(1)
+    expect(errors[0].card).toBe(1)
+  })
+
+  it('ne met jamais le numéro de carte dans les params du message', () => {
+    const cards = [PACK.cards[0], { ...PACK.cards[1], rating: 200 }]
+    const { errors } = parsePackJson(json({ ...PACK, cards }))
+    expect(errors[0].params).not.toHaveProperty('index')
+    expect(errors[0].card).toBe(1)
   })
 })
 

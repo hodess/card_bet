@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { maxBid, formatMs, cardTier, cardsOf } from './game'
+import config from '../config.json'
 
 describe('maxBid (règle de réserve)', () => {
   it('réserve min_bid par slot manquant restant', () => {
@@ -25,6 +26,14 @@ describe('cardTier', () => {
     expect(cardTier(87)).toBe('silver')
     expect(cardTier(85)).toBe('silver')
     expect(cardTier(84)).toBe('bronze')
+  })
+
+  it('lit ses seuils dans la configuration', () => {
+    const { gold, silver } = config.packs.cards.tiers
+    expect(cardTier(gold)).toBe('gold')
+    expect(cardTier(gold - 1)).toBe('silver')
+    expect(cardTier(silver)).toBe('silver')
+    expect(cardTier(silver - 1)).toBe('bronze')
   })
 })
 

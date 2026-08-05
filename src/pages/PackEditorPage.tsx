@@ -1,11 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import PackCardRow from '../components/PackCardRow'
+import PackCardSheet from '../components/PackCardSheet'
+import PackErrorSummary from '../components/PackErrorSummary'
+import PackPositionsPanel from '../components/PackPositionsPanel'
+import PackSettingsPanel from '../components/PackSettingsPanel'
+import PositionChips from '../components/PositionChips'
 import config from '../config.json'
-import PackJsonEditor from '../components/PackJsonEditor'
-import PackPreview from '../components/PackPreview'
+import { usePackDraft } from '../hooks/usePackDraft'
 import { useProfile } from '../hooks/useProfile'
 import { useT } from '../hooks/useT'
-import { formatPackJson, parsePackJson, type PackInput } from '../lib/packs'
+import {
+  draftFromPack, draftToJson, newCard, otherNames, positionCounts, ratingRange,
+  sortDraftCards, type DraftCard, type IssueTarget,
+} from '../lib/packDraft'
+import type { PackError, PackInput } from '../lib/packs'
 import { getPack, listPackCards, savePack } from '../lib/packsApi'
 import { errorMessage } from '../lib/errors'
 
@@ -25,6 +34,16 @@ function exemplePack(t: (key: string) => string): PackInput {
   }
 }
 
+// Un seul écran à la fois : ce type rend la règle structurelle au lieu de la
+// confier à trois booléens qui pourraient être vrais ensemble. `retour` permet
+// au chip « + » d'une carte d'aller définir une position puis de revenir à la
+// saisie en cours — la carte survit parce qu'elle vit ici, pas dans la feuille.
+type Ecran =
+  | { vue: 'liste' }
+  | { vue: 'carte'; card: DraftCard; mode: 'ajout' | 'edition' }
+  | { vue: 'positions'; retour: { card: DraftCard; mode: 'ajout' | 'edition' } | null }
+  | { vue: 'reglages' }
+
 export default function PackEditorPage() {
   const { slug } = useParams<'slug'>()
   const nav = useNavigate()
@@ -33,42 +52,43 @@ export default function PackEditorPage() {
   // useProfile renvoie un nouvel objet `profile` à chaque événement d'auth
   // (rafraîchissement de jeton silencieux compris, en tâche de fond, sans
   // action de l'utilisateur) : on ne dépend donc que de son id, stable tant
-  // que le compte ne change pas vraiment — l'effet de chargement ci-dessous
-  // s'en sert pour ne jamais se réexécuter sans raison.
+  // que le compte ne change pas vraiment.
   const profileId = profile?.id ?? null
   const fichier = useRef<HTMLInputElement>(null)
 
-  const [text, setText] = useState(() => formatPackJson(exemplePack(t)))
-  const [differe, setDiffere] = useState(text)
+  const d = usePackDraft()
+  // `d` est un objet neuf à chaque rendu : le mettre dans les dépendances d'un
+  // effet bouclerait indéfiniment. On extrait la seule fonction dont les effets
+  // ont besoin — elle est stable (useCallback sans dépendance).
+  const { charger } = d
   const [visibility, setVisibility] = useState<'public' | 'private'>('private')
+  const [ecran, setEcran] = useState<Ecran>({ vue: 'liste' })
+  const [menu, setMenu] = useState(false)
+  const [filtreChoisi, setFiltre] = useState<string | null>(null)
+  const [refusPosition, setRefusPosition] = useState<PackError | null>(null)
+
   const [chargement, setChargement] = useState(Boolean(slug))
   const [introuvable, setIntrouvable] = useState(false)
-  // Échec réseau/serveur du chargement d'un pack existant (distinct de
-  // `error`, qui sert aussi à afficher les erreurs d'import/enregistrement
-  // une fois l'éditeur affiché) : voir l'effet ci-dessous pour pourquoi cet
-  // état a besoin d'exister séparément.
   const [echecChargement, setEchecChargement] = useState(false)
   const [enregistrement, setEnregistrement] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // dernier aperçu valide : le rendu ne clignote pas à chaque frappe invalide
-  const [dernierValide, setDernierValide] = useState<PackInput | null>(null)
 
-  // Le chargement initial ne doit jamais réécrire ce que l'utilisateur a tapé
-  // depuis : sans cette référence, l'effet ci-dessous se réexécuterait à
-  // chaque nouvel id de profil et écraserait le brouillon en cours d'édition
-  // avec la version serveur. `null` après un échec (voir `reessayer`) pour
-  // permettre un nouvel essai sur le même slug.
+  // Le chargement initial ne doit jamais réécrire ce que l'utilisateur a saisi
+  // depuis : sans cette référence, l'effet se réexécuterait à chaque nouvel id
+  // de profil et écraserait le brouillon en cours. `null` après un échec (voir
+  // `reessayer`) pour permettre un nouvel essai sur le même slug.
   const packCharge = useRef<string | null>(null)
-  // Incrémenté par `reessayer` : seul moyen de forcer une nouvelle exécution
-  // de l'effet quand ni `slug`, ni `chargementProfil`, ni `profileId` n'ont
-  // changé entre-temps.
   const [tentative, setTentative] = useState(0)
 
-  // Édition : on reconstruit le JSON depuis la base. Le pack n'y est pas stocké
-  // sous forme de fichier — le JSON n'est qu'un format de saisie et d'échange.
-  // On attend que le profil soit chargé avant de vérifier la propriété : sans
-  // ça, `profile` vaudrait encore `null` le temps du premier rendu et un pack
-  // qui m'appartient serait à tort déclaré introuvable.
+  // À la création, on part de l'exemple : il fait découvrir la notion de position,
+  // la plus abstraite d'un pack. Une seule fois, jamais par-dessus une saisie.
+  const exempleMis = useRef(false)
+  useEffect(() => {
+    if (slug || exempleMis.current) return
+    exempleMis.current = true
+    charger(draftFromPack(exemplePack(t)))
+  }, [slug, charger, t])
+
   useEffect(() => {
     if (!slug || chargementProfil) return
     if (packCharge.current === slug) return
@@ -77,13 +97,9 @@ export default function PackEditorPage() {
     Promise.all([getPack(slug), listPackCards(slug)])
       .then(([p, cards]) => {
         if (!alive) return
-        // Symétrique de `reessayer` : un échec resté affiché pour un autre
-        // slug (navigation directe d'un pack en échec vers un autre, sans
-        // passer par Réessayer — l'effet se rejoue alors sur ce nouveau
-        // slug, mais le composant est le même instance) ne doit pas
-        // survivre à un chargement qui, lui, a réussi.
         setEchecChargement(false)
         setError(null)
+        setIntrouvable(false)
         // Pack inexistant, ou qui ne m'appartient pas : le serveur refuserait
         // l'enregistrement avec NOT_PACK_OWNER. Même écran que « introuvable ».
         if (!p || !profileId || p.owner_id !== profileId) {
@@ -91,26 +107,22 @@ export default function PackEditorPage() {
           setChargement(false)
           return
         }
-        const payload: PackInput = {
+        charger(draftFromPack({
           name: p.name,
           emoji: p.emoji,
           description: p.description,
           positions: (p.positions ?? {}) as Record<string, string>,
           cards: cards.map(c => ({ name: c.name, position: c.position, rating: c.rating })),
-        }
-        setText(formatPackJson(payload))
-        setDiffere(formatPackJson(payload))
+        }))
         setVisibility(p.visibility as 'public' | 'private')
         setChargement(false)
       })
       .catch(e => {
         if (!alive) return
-        // On ne remplit jamais `text`/`differe` ici : ils garderaient
-        // l'EXEMPLE prérempli au montage, un JSON valide, donc un bouton
-        // Enregistrer actif qui écraserait le vrai pack en base. On bascule
-        // sur un écran dédié qui rend l'éditeur inatteignable tant que le
-        // chargement n'a pas réussi. `slug` est garanti défini ici (l'effet
-        // sort plus haut sinon) : en création, l'exemple reste légitime.
+        // On ne remplit jamais le brouillon ici : il garderait l'EXEMPLE, donc
+        // un pack valide, donc un bouton Enregistrer actif qui écraserait le
+        // vrai pack en base. On bascule sur un écran dédié qui rend l'éditeur
+        // inatteignable tant que le chargement n'a pas réussi.
         packCharge.current = null
         setError(errorMessage(e))
         setEchecChargement(true)
@@ -118,14 +130,21 @@ export default function PackEditorPage() {
       })
     return () => {
       alive = false
-      // Si l'effet est nettoyé avant que la requête n'ait pu aboutir (double
-      // montage de StrictMode en dev, ou l'utilisateur quitte l'éditeur et y
-      // revient avant la réponse), on libère le verrou : sinon la tentative
-      // suivante resterait bloquée indéfiniment sur « Chargement… », son
-      // résultat ayant été jeté en silence par `alive`.
+      // Effet nettoyé avant la réponse (double montage StrictMode en dev, ou
+      // aller-retour rapide) : on libère le verrou, sinon la tentative suivante
+      // resterait bloquée sur « Chargement… ».
       if (packCharge.current === slug) packCharge.current = null
     }
-  }, [slug, chargementProfil, profileId, tentative])
+  }, [slug, chargementProfil, profileId, tentative, charger])
+
+  // Rechargement et fermeture d'onglet. La navigation interne n'est pas couverte :
+  // useBlocker exige un data router, l'app monte <HashRouter> (App.tsx:1).
+  useEffect(() => {
+    if (!d.modifie) return
+    const garde = (e: BeforeUnloadEvent) => { e.preventDefault() }
+    window.addEventListener('beforeunload', garde)
+    return () => window.removeEventListener('beforeunload', garde)
+  }, [d.modifie])
 
   function reessayer() {
     packCharge.current = null
@@ -135,20 +154,18 @@ export default function PackEditorPage() {
     setTentative(n => n + 1)
   }
 
-  // L'analyse est différée : sur un pack de 300 cartes, parser à chaque touche
-  // rendrait la frappe collante.
-  useEffect(() => {
-    const id = setTimeout(() => setDiffere(text), config.ui.packEditorDebounceMs)
-    return () => clearTimeout(id)
-  }, [text])
-
-  const { pack, errors } = useMemo(() => parsePackJson(differe), [differe])
-  useEffect(() => { if (pack) setDernierValide(pack) }, [pack])
+  function quitter() {
+    if (d.modifie && !confirm(t('editor.leaveWarning'))) return
+    nav(slug ? `/packs/${encodeURIComponent(slug)}` : '/packs')
+  }
 
   async function importer(f: File) {
     setError(null)
     try {
-      setText(await f.text())
+      const errors = d.importer(await f.text())
+      // Un fichier refusé en bloc, ou des champs inconnus rencontrés au passage :
+      // on les dit tous, sans jamais réparer en silence.
+      setError(errors.length > 0 ? errors.map(e => t(e.key, e.params)).join(' ') : null)
     } catch (e) {
       setError(errorMessage(e))
     }
@@ -157,8 +174,10 @@ export default function PackEditorPage() {
   // Nom de fichier assaini : un nom de pack peut contenir des caractères
   // interdits dans un nom de fichier (/, \, :…).
   function exporter() {
-    const nom = (pack?.name ?? 'pack').replace(/[^\p{L}\p{N} _-]/gu, '').trim() || 'pack'
-    const blob = new Blob([text], { type: 'application/json' })
+    const nom = d.draft.name.replace(/[^\p{L}\p{N} _-]/gu, '').trim() || 'pack'
+    // draftToJson et non formatPackJson(payload) : on doit pouvoir exporter un
+    // pack en cours, fautif compris, pour le finir ailleurs.
+    const blob = new Blob([draftToJson(d.draft)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -168,19 +187,12 @@ export default function PackEditorPage() {
   }
 
   async function enregistrer() {
-    // On repart du texte affiché, pas de la version différée (`pack`/`errors`
-    // dérivés de `differe`) : entre la dernière frappe et le clic, le debounce
-    // peut n'avoir pas encore couru, et enregistrer figerait une version
-    // antérieure à ce que l'utilisateur croit avoir validé.
-    const { pack: aJour } = parsePackJson(text)
-    if (!aJour) {
-      setDiffere(text) // fait apparaître les erreurs sous l'éditeur
-      return
-    }
+    const payload = d.payload()
+    if (!payload) return
     setError(null)
     setEnregistrement(true)
     try {
-      const nouveau = await savePack(slug ?? null, aJour, visibility)
+      const nouveau = await savePack(slug ?? null, payload, visibility)
       nav(`/packs/${encodeURIComponent(nouveau)}`)
     } catch (e) {
       setError(errorMessage(e))
@@ -189,11 +201,39 @@ export default function PackEditorPage() {
     }
   }
 
+  // Le récapitulatif envoie vers l'endroit où corriger. Un filtre qui masquerait
+  // la carte fautive est levé au passage, sinon le clic ne mènerait à rien.
+  function allerA(cible: IssueTarget) {
+    if (cible.kind === 'settings') { setEcran({ vue: 'reglages' }); return }
+    if (cible.kind === 'positions') { setEcran({ vue: 'positions', retour: null }); return }
+    if (cible.kind === 'list') { setFiltre(null); return }
+    const card = d.draft.cards.find(c => c.id === cible.id)
+    if (!card) return
+    setFiltre(null)
+    setEcran({ vue: 'carte', card, mode: 'edition' })
+  }
+
+  // Retour du panneau Positions vers une carte en cours : sa position a pu être
+  // renommée ou supprimée pendant l'aller-retour. Une carte déjà au brouillon a
+  // reçu la propagation de `renamePosition`, on la relit donc par son id ; une
+  // carte en cours d'ajout n'y est pas, on se rabat sur la première position
+  // encore existante plutôt que de la laisser sur un code disparu.
+  function carteAuRetour(card: DraftCard): DraftCard {
+    const auBrouillon = d.draft.cards.find(c => c.id === card.id)
+    // On ne reprend du brouillon QUE la position : c'est le seul champ que
+    // `renamePosition` a pu changer sous nos pieds. Rendre la carte du brouillon
+    // en entier écraserait le nom et la note que l'utilisateur vient de taper.
+    if (auBrouillon) return { ...card, position: auBrouillon.position }
+    const codesVivants = d.draft.positions.map(p => p.code)
+    if (codesVivants.includes(card.position)) return card
+    return { ...card, position: d.draft.positions[0]?.code ?? '' }
+  }
+
   if (chargementProfil) return <p className="center">{t('common.loading')}</p>
 
-  // Compte anonyme, ou compte sans pseudo choisi (déjà intercepté par
-  // UsernameGate en amont) : le serveur lèverait NICKNAME_REQUIRED à
-  // l'enregistrement. Autant le dire avant de faire saisir un pack entier.
+  // Compte anonyme, ou compte sans pseudo choisi : le serveur lèverait
+  // NICKNAME_REQUIRED à l'enregistrement. Autant le dire avant de faire saisir
+  // un pack entier.
   if (!profile) {
     return (
       <main className="page">
@@ -207,15 +247,10 @@ export default function PackEditorPage() {
   }
 
   if (introuvable) {
-    return (
-      <main className="page">
-        <h1>{t('packs.notFound')}</h1>
-      </main>
-    )
+    return <main className="page"><h1>{t('packs.notFound')}</h1></main>
   }
 
-  // Échec du chargement du pack existant : jamais l'éditeur ici, même si
-  // `text` contient un EXEMPLE valide qui rendrait Enregistrer cliquable.
+  // Échec du chargement d'un pack existant : jamais l'éditeur ici.
   if (echecChargement) {
     return (
       <main className="page">
@@ -228,42 +263,192 @@ export default function PackEditorPage() {
 
   if (chargement) return <p className="center">{t('common.loading')}</p>
 
+  const codes = d.draft.positions.map(p => p.code)
+  // Le filtre ne peut pas désigner une position qui vient d'être renommée ou
+  // supprimée : on le dérive au rendu plutôt que de le remettre à zéro dans
+  // chaque mutation, où la prochaine mutation ajoutée oublierait de le faire.
+  const filtre = filtreChoisi !== null && codes.includes(filtreChoisi) ? filtreChoisi : null
+
+  const compte = positionCounts(d.draft)
+  const bornes = ratingRange(d.draft.cards)
+  const libelle = (code: string) => d.draft.positions.find(p => p.code === code)?.label ?? null
+  const visibles = filtre === null
+    ? sortDraftCards(d.draft.cards)
+    : sortDraftCards(d.draft.cards).filter(c => c.position === filtre)
+
   return (
     <main className="page">
-      <div className="page-head">
-        <h1>{slug ? t('editor.titleEdit') : t('editor.titleNew')}</h1>
-        <div className="pack-actions">
-          <input ref={fichier} type="file" accept="application/json,.json"
-                 style={{ display: 'none' }}
-                 onChange={e => { const f = e.target.files?.[0]; if (f) importer(f) }} />
-          <button className="btn-ghost" onClick={() => setText(formatPackJson(exemplePack(t)))}>
-            {t('editor.starter')}
-          </button>
-          <button className="btn-ghost" onClick={() => fichier.current?.click()}>
-            {t('editor.import')}
-          </button>
-          <button className="btn-ghost" onClick={exporter}>{t('editor.export')}</button>
-          <label className="settings-field">
-            <span>{t('editor.visibility')}</span>
-            <select value={visibility}
-                    onChange={e => setVisibility(e.target.value as 'public' | 'private')}>
-              <option value="private">{t('packs.private')}</option>
-              <option value="public">{t('packs.public')}</option>
-            </select>
-          </label>
-          <button disabled={!pack || enregistrement} onClick={enregistrer}>
-            {enregistrement ? t('editor.saving') : t('editor.save')}
-          </button>
-        </div>
+      <div className="editor-head">
+        <button type="button" className="linklike" aria-label={t('editor.back')}
+                onClick={quitter}>‹</button>
+        <span className="editor-title">
+          <strong>{d.draft.emoji} {d.draft.name || t('editor.untitled')}</strong>
+          <span>
+            {t(visibility === 'private' ? 'packs.private' : 'packs.public')}
+            {' · '}
+            {bornes
+              ? t('packs.summary', { count: d.draft.cards.length, min: bornes.min, max: bornes.max })
+              : t('editor.summaryEmpty')}
+          </span>
+        </span>
+        <button type="button" className="editor-icon" aria-label={t('editor.menu')}
+                onClick={() => setMenu(m => !m)}>⋯</button>
+        <button type="button" disabled={d.issues.count > 0 || enregistrement} onClick={enregistrer}>
+          {enregistrement ? t('editor.saving') : t('editor.save')}
+        </button>
+
+        {menu && (
+          <>
+            <div className="nav-overlay" onClick={() => setMenu(false)} />
+            <div className="editor-menu">
+              <span className="editor-menu-group">{t('editor.menuFile')}</span>
+              <button type="button" onClick={() => {
+                setMenu(false)
+                if (d.modifie && !confirm(t('editor.importConfirm'))) return
+                fichier.current?.click()
+              }}>{t('editor.import')}</button>
+              <button type="button" onClick={() => { setMenu(false); exporter() }}>
+                {t('editor.export')}
+              </button>
+              <button type="button" onClick={() => {
+                setMenu(false)
+                if (d.modifie && !confirm(t('editor.resetConfirm'))) return
+                d.remplacer(draftFromPack(exemplePack(t)))
+              }}>{t('editor.starter')}</button>
+              <span className="editor-menu-group">{t('editor.menuPack')}</span>
+              <button type="button" onClick={() => { setMenu(false); setEcran({ vue: 'reglages' }) }}>
+                {t('editor.menuIdentity')}
+              </button>
+              <button type="button" onClick={() => {
+                setMenu(false)
+                setEcran({ vue: 'positions', retour: null })
+              }}>{t('editor.menuPositions', { count: d.draft.positions.length })}</button>
+            </div>
+          </>
+        )}
       </div>
+
+      <input ref={fichier} type="file" accept="application/json,.json"
+             style={{ display: 'none' }}
+             onChange={e => {
+               const f = e.target.files?.[0]
+               // Sans cette remise à zéro, rechoisir le MÊME fichier n'émet pas
+               // de nouvel événement `change` : l'import serait silencieusement
+               // inerte, juste après une confirmation destructrice acceptée.
+               e.target.value = ''
+               if (f) importer(f)
+             }} />
 
       {error && <p className="error">{error}</p>}
 
-      <div className="pack-editor">
-        <PackJsonEditor text={text} onChange={setText} errors={errors}
-                        disabled={enregistrement} />
-        <PackPreview pack={pack ?? dernierValide} />
-      </div>
+      {ecran.vue === 'liste' && (
+        <>
+          <PositionChips positions={d.draft.positions} value={filtre} counts={compte}
+                         allLabel={`${t('editor.filterAll')} ${d.draft.cards.length}`}
+                         onPick={setFiltre}
+                         onAdd={() => setEcran({ vue: 'positions', retour: null })} />
+
+          {visibles.length === 0
+            ? <p className="hint">{t('editor.emptyList')}</p>
+            : (
+              <div className="card-rows">
+                {visibles.map(c => (
+                  <PackCardRow key={c.id} card={c} label={libelle(c.position)}
+                               issues={d.issues.cards[c.id]}
+                               onClick={() => setEcran({ vue: 'carte', card: c, mode: 'edition' })} />
+                ))}
+              </div>
+              )}
+
+          <div className="editor-foot">
+            <PackErrorSummary issues={d.plates} onGo={allerA} />
+            <button type="button" className="editor-add"
+                    disabled={d.draft.cards.length >= config.packs.cards.max}
+                    onClick={() => setEcran({
+              vue: 'carte',
+              // Position de départ : celle du filtre courant si on en a un (on est en
+              // train de garnir cette position), sinon la première du vocabulaire. Pas
+              // « la dernière carte » : `cards` est trié par note, sa dernière entrée
+              // est la moins bien notée, pas la dernière saisie. C'est `Ajouter et
+              // continuer` qui assure la vraie reprise d'une carte à la suivante.
+              card: newCard(filtre ?? d.draft.positions[0]?.code ?? ''),
+              mode: 'ajout',
+            })}>
+              {t('editor.addCard')}
+            </button>
+          </div>
+        </>
+      )}
+
+      {ecran.vue === 'carte' && (
+        <PackCardSheet
+          card={ecran.card}
+          positions={d.draft.positions}
+          others={otherNames(d.draft.cards, ecran.card.id)}
+          mode={ecran.mode}
+          number={d.draft.cards.length + 1}
+          onChange={card => setEcran({ ...ecran, card })}
+          onSubmit={() => { d.enregistrerCarte(ecran.card); setEcran({ vue: 'liste' }) }}
+          onAddNext={() => {
+            d.enregistrerCarte(ecran.card)
+            // Pack plein : on ne propose pas une carte de plus qu'on refuserait
+            // ensuite. « Ajouter et continuer » enchaîne jusqu'au plafond, puis rend.
+            const plein = d.draft.cards.filter(c => c.id !== ecran.card.id).length + 1
+              >= config.packs.cards.max
+            setEcran(plein
+              ? { vue: 'liste' }
+              : { vue: 'carte', card: newCard(ecran.card.position), mode: 'ajout' })
+          }}
+          onDelete={() => { d.supprimerCarte(ecran.card.id); setEcran({ vue: 'liste' }) }}
+          onCancel={() => setEcran({ vue: 'liste' })}
+          onAddPosition={() => setEcran({
+            vue: 'positions',
+            retour: { card: ecran.card, mode: ecran.mode },
+          })}
+        />
+      )}
+
+      {ecran.vue === 'positions' && (
+        <PackPositionsPanel
+          positions={d.draft.positions}
+          counts={compte}
+          issues={d.issues.positions}
+          refus={refusPosition}
+          onRename={(id, code) => { setRefusPosition(null); d.renommerPosition(id, code) }}
+          onLabel={(id, label) => { setRefusPosition(null); d.changerLibelle(id, label) }}
+          onAdd={() => { setRefusPosition(null); d.ajouterPosition() }}
+          onRemove={id => setRefusPosition(d.supprimerPosition(id))}
+          onClose={() => {
+            setRefusPosition(null)
+            // Retour à la carte en cours de saisie : sa position peut avoir été
+            // renommée ou supprimée pendant l'aller-retour, on la re-résout.
+            setEcran(ecran.retour
+              ? { vue: 'carte', card: carteAuRetour(ecran.retour.card), mode: ecran.retour.mode }
+              : { vue: 'liste' })
+          }}
+        />
+      )}
+
+      {ecran.vue === 'reglages' && (
+        <PackSettingsPanel
+          name={d.draft.name} emoji={d.draft.emoji} description={d.draft.description}
+          visibility={visibility}
+          issues={d.issues.pack}
+          cardCount={d.draft.cards.length}
+          onField={d.setChamp}
+          onVisibility={setVisibility}
+          onImport={() => {
+            if (d.modifie && !confirm(t('editor.importConfirm'))) return
+            // On revient à la liste avant d'ouvrir le sélecteur : le compte-rendu
+            // d'import s'affiche dans le corps de la page, qu'un panneau plein
+            // écran masquerait entièrement.
+            setEcran({ vue: 'liste' })
+            fichier.current?.click()
+          }}
+          onExport={exporter}
+          onClose={() => setEcran({ vue: 'liste' })}
+        />
+      )}
     </main>
   )
 }

@@ -163,7 +163,9 @@
       "max": 300,
       "nameMaxLength": 40,
       "ratingMin": 1,
-      "ratingMax": 99
+      "ratingMax": 99,
+      "tiers": { "gold": 88, "silver": 85 },
+      "ratingDefault": 75
     }
   },
   "ui": {
@@ -173,7 +175,6 @@
     "searchDebounceMs": 250,
     "boardPollMs": 3000,
     "lobbyPollMs": 3000,
-    "packEditorDebounceMs": 300,
     "auction": {
       "revealMs": 380,
       "soldMs": 950,
