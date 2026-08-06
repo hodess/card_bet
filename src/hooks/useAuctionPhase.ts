@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
-import type { AuctionWithCard, OwnedCard } from './useGame'
+import type { AuctionOutcome, AuctionWithCard, OwnedCard } from './useGame'
 import type { CardData } from '../components/Card'
 import {
-  canFly, FLOAT_MS, flyTransform, phaseDuration, venteDe, type Box, type Phase,
+  canFly, FLOAT_MS, flyTransform, pauseRemaining, phaseDuration, sortieDe, venteDe,
+  type Box, type Phase,
 } from '../lib/auctionPhase'
 
 // Carte gelée le temps de la séquence d'adjudication : `useGame` recharge tout à
@@ -52,7 +53,9 @@ function cleAdjuge(a: AuctionWithCard): string {
 
 export function useAuctionPhase(
   auction: AuctionWithCard | null,
+  previousAuction: AuctionOutcome | null,
   ownedCards: OwnedCard[],
+  offset: number,
 ): AuctionPhase {
   const [phase, setPhase] = useState<Phase>('bid')
   const [sortante, setSortante] = useState<Sortante | null>(null)
@@ -71,6 +74,17 @@ export function useAuctionPhase(
   // `expired` vrai, l'appelant rappellerait alors startSold en boucle.
   const dernierAdjuge = useRef<string | null>(null)
 
+  // Dernière valeur connue, lue dans l'effet de changement d'enchère sans y
+  // entrer comme dépendance : `ownedCards` est un tableau neuf à chaque événement
+  // temps réel et relancerait la séquence.
+  const owned = useRef(ownedCards)
+  owned.current = ownedCards
+  // Même raison : le verdict serveur de l'enchère quittée est lu dans l'effet de
+  // changement d'enchère, pas suivi comme dépendance. Il vient du même instantané
+  // que `auction`, les deux sortant du même `setState` de `useGame`.
+  const precedenteServeur = useRef(previousAuction)
+  precedenteServeur.current = previousAuction
+
   // Adjudication telle que le serveur l'a écrite. Tant qu'elle n'est pas
   // arrivée, on affiche le tampon mais on ne fait pas décoller la carte : sa
   // destination ne serait qu'une supposition.
@@ -88,9 +102,10 @@ export function useAuctionPhase(
     else deckRefs.current.delete(playerId)
   }, [])
 
-  // Gèle la carte et lance la séquence. Ne dépend que de setState et de refs :
-  // identité stable, donc utilisable dans les dépendances d'un effet.
-  const demarrerSold = useCallback((a: AuctionWithCard) => {
+  // Gèle la carte sortante et arme la garde qui empêche de rejouer deux fois la
+  // même sortie (adjudication ou défausse). Ne dépend que de setState et de
+  // refs : identité stable, donc utilisable dans les dépendances d'un effet.
+  const demarrerSortie = useCallback((a: AuctionWithCard, nouvellePhase: 'sold' | 'discarded') => {
     dernierAdjuge.current = cleAdjuge(a)
     setSortante({
       auctionId: a.id,
@@ -99,7 +114,7 @@ export function useAuctionPhase(
       leaderPredit: a.current_bidder,
       misePredite: a.current_bid,
     })
-    setPhase('sold')
+    setPhase(nouvellePhase)
   }, [])
 
   // Déclencheur avancé, appelé par Auction quand le compte à rebours expire ou
@@ -107,17 +122,19 @@ export function useAuctionPhase(
   // la garde `dernierAdjuge` empêche de jouer deux fois la même adjudication.
   const startSold = useCallback(() => {
     if (!auction || sortante || dernierAdjuge.current === cleAdjuge(auction)) return
-    demarrerSold(auction)
-  }, [auction, sortante, demarrerSold])
+    // Carte adjugée : elle va voler vers le deck de son acheteur.
+    demarrerSortie(auction, 'sold')
+  }, [auction, sortante, demarrerSortie])
 
   // Fausse alerte : le compte à rebours local avait expiré, mais le serveur a
   // accepté une mise de plus (horloges décalées). L'enchère continue.
   useEffect(() => {
+    if (phase !== 'sold') return
     if (!auction || !sortante || gagnantId) return
     if (sortante.auctionId !== auction.id || dernierAdjuge.current === cleAdjuge(auction)) return
     setSortante(null)
     setPhase('bid')
-  }, [auction, sortante, gagnantId])
+  }, [phase, auction, sortante, gagnantId])
 
   // sold → fly : on attend le gagnant confirmé (c'est la cible du vol), puis on
   // mesure au dernier moment, la mise en page est stabilisée.
@@ -160,12 +177,46 @@ export function useAuctionPhase(
     return () => clearTimeout(id)
   }, [phase, sortante])
 
-  // reveal → bid
+  // discarded → carte suivante. Elle est déjà arrivée : `use_joker` l'ouvre dans
+  // la même transaction que la défausse. Même sortie que `landed`, sans deck à
+  // mettre à jour ni gagnant à attendre.
   useEffect(() => {
-    if (phase !== 'reveal') return
-    const id = setTimeout(() => setPhase('bid'), phaseDuration('reveal'))
+    if (phase !== 'discarded') return
+    const id = setTimeout(() => {
+      setPhase('reveal')
+      setSortante(null)
+    }, phaseDuration('discarded'))
     return () => clearTimeout(id)
   }, [phase])
+
+  // reveal → pause : la carte est posée, mais le serveur ne la déclare vivante
+  // qu'à `opened_at`. L'effet suivant tranche la sortie de pause.
+  useEffect(() => {
+    if (phase !== 'reveal') return
+    const id = setTimeout(() => setPhase('pause'), phaseDuration('reveal'))
+    return () => clearTimeout(id)
+  }, [phase])
+
+  // La temporisation serveur fait foi : tant que `opened_at` est dans le futur,
+  // l'enchère n'est pas vivante, et c'est la fenêtre du joker. On y entre aussi
+  // en reprenant une partie en cours — un rechargement de page pendant une pause
+  // ne doit pas afficher des boutons que le serveur refuserait.
+  // Dépendances volontairement resserrées sur `auction?.opened_at` : `auction`
+  // est un objet neuf à chaque événement temps réel, et le mettre en dépendance
+  // rejouerait cet effet à chaque mise, chaque passe et chaque changement de
+  // bankroll d'un autre joueur.
+  useEffect(() => {
+    if (!auction || sortante) return
+    if (phase !== 'bid' && phase !== 'pause') return
+    const restant = pauseRemaining(new Date(auction.opened_at).getTime(), Date.now() + offset)
+    if (restant <= 0) {
+      if (phase === 'pause') setPhase('bid')
+      return
+    }
+    if (phase === 'bid') { setPhase('pause'); return }
+    const id = setTimeout(() => setPhase('bid'), restant)
+    return () => clearTimeout(id)
+  }, [auction?.opened_at, sortante, phase, offset])
 
   // Changement d'enchère côté serveur : c'est notre source de vérité.
   useEffect(() => {
@@ -189,15 +240,16 @@ export function useAuctionPhase(
       if (auction.seq === 1) setPhase('reveal')
       return
     }
-    // Le serveur a pu adjuger sans que le compte à rebours local expire (plus
-    // aucun challenger). On joue alors la séquence rétroactivement, avec la
-    // carte précédente — son gagnant, lui, vient de player_cards.
+    // Le serveur a pu clore sans que le compte à rebours local expire : plus aucun
+    // challenger, ou un joker. On joue alors la séquence rétroactivement avec la
+    // carte précédente. C'est `sortieDe` qui tranche entre vol vers un deck et
+    // sortie d'écran, sur le `status` que le serveur a écrit.
     if (avant && dernierAdjuge.current !== cleAdjuge(avant)) {
-      demarrerSold(avant)
+      demarrerSortie(avant, sortieDe(avant, precedenteServeur.current, owned.current))
       return
     }
     setPhase('reveal')
-  }, [auction, sortante, demarrerSold])
+  }, [auction, sortante, demarrerSortie])
 
   // Surenchère : bulle +X €. Un delta négatif ou nul signifie « nouvelle carte »
   // (la mise repart au minimum), pas une surenchère.
@@ -222,6 +274,8 @@ export function useAuctionPhase(
   return {
     phase,
     card: sortante?.card ?? auction?.card ?? null,
+    // En `reveal` la carte n'est encore à personne. En `pause` l'ouvreur forcé est
+    // déjà `current_bidder` côté serveur : c'est bien lui que le bandeau annonce.
     leaderId: phase === 'reveal' ? null
       : (gagnantId ?? sortante?.leaderPredit ?? auction?.current_bidder ?? null),
     bid: montant ?? sortante?.misePredite ?? auction?.current_bid ?? 0,

@@ -124,6 +124,12 @@ const vue = (over: Partial<BotView> = {}): BotView => ({
   packRatings: POOL,
   rivals: [{ bankroll: 1000, slotsMissing: 3, passed: false }],
   soldPrices: [],
+  // Ces tests portent sur une enchère déjà vivante où le bot n'est pas l'ouvreur
+  // forcé : le veto du joker (testé séparément ci-dessous) ne doit jamais s'y
+  // déclencher.
+  jokerAvailable: true,
+  isForcedBidder: false,
+  auctionLive: true,
   ...over,
 })
 
@@ -514,6 +520,68 @@ describe("les invariants que les corrections de revue ont installés", () => {
     const v = vue({ bankroll: 100, slotsMissing: 3, minBid: 50 })
     expect(effectiveCeiling(v)).toBe(0)
     expect(decide(v, seq(0.99)).kind).toBe("pass")
+  })
+})
+
+// L'ouvreur forcé subit la carte si personne ne surenchérit : le joker sert à ne
+// pas remplir un slot avec un déchet, et — pour le meilleur niveau — à ne pas
+// offrir une carte forte qu'on ne peut pas s'offrir.
+describe('decide — joker', () => {
+  const base = (over: Partial<BotView>): BotView => ({
+    botPlayerId: 'me',
+    level: 'medium',
+    temperament: { kappa: 1, gamma: 1, restraint: 0.85, jumpRate: 0, delayFactor: 1 },
+    auctionId: 'a1',
+    currentBidder: 'me',
+    currentBid: 10,
+    bankroll: 1000,
+    slotsMissing: 3,
+    totalSlotsMissing: 6,
+    minBid: 10,
+    cardRating: 60,
+    pool: [60, 70, 80, 90, 95],
+    packRatings: [60, 70, 80, 90, 95],
+    rivals: [{ bankroll: 1000, slotsMissing: 3, passed: false }],
+    soldPrices: [],
+    jokerAvailable: true,
+    isForcedBidder: true,
+    auctionLive: false,
+    ...over,
+  })
+
+  it('easy ne joue jamais son joker', () => {
+    expect(decide(base({ level: 'easy' }), () => 0.5).kind).not.toBe('joker')
+  })
+
+  it('medium défausse une carte du bas du panier', () => {
+    expect(decide(base({}), () => 0.5)).toEqual({ kind: 'joker' })
+  })
+
+  it('medium garde son joker sur une carte correcte', () => {
+    expect(decide(base({ cardRating: 90 }), () => 0.5).kind).not.toBe('joker')
+  })
+
+  it('hard brûle une carte forte qu’il ne peut pas gagner', () => {
+    const view = base({
+      level: 'hard',
+      cardRating: 95,
+      bankroll: 100,
+      rivals: [{ bankroll: 1000, slotsMissing: 1, passed: false }],
+    })
+    expect(decide(view, () => 0.5)).toEqual({ kind: 'joker' })
+  })
+
+  it('ne vetoe pas une enchère déjà vivante', () => {
+    expect(decide(base({ auctionLive: true }), () => 0.5).kind).not.toBe('joker')
+  })
+
+  it('ne vetoe pas quand ce n’est pas son ouverture', () => {
+    expect(decide(base({ isForcedBidder: false, currentBidder: 'other' }), () => 0.5).kind)
+      .not.toBe('joker')
+  })
+
+  it('ne vetoe pas deux fois dans la partie', () => {
+    expect(decide(base({ jokerAvailable: false }), () => 0.5).kind).not.toBe('joker')
   })
 })
 

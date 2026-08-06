@@ -21,10 +21,15 @@ export type SeatRow = {
   status: 'leading' | 'wins' | 'passed' | null
   popIndex: number | null
   paid: number | null
+  // Joker encore en poche ? L'information est publique : quand un joker part,
+  // toute la table voit la carte être défaussée.
+  jokerUsed: boolean
+  // Ce siège est celui que le serveur a désigné pour l'ouverture forcée.
+  opens: boolean
 }
 
 export type SeatInput = {
-  players: { id: string; nickname: string; bankroll: number; seat: number }[]
+  players: { id: string; nickname: string; bankroll: number; seat: number; joker_used: boolean }[]
   ownedCards: { player_id: string }[]
   deckSize: number
   leaderId: string | null
@@ -33,10 +38,12 @@ export type SeatInput = {
   // encore dans le deck, même si player_cards est déjà arrivé.
   pendingWinnerId: string | null
   justWon: { playerId: string; amount: number } | null
+  // Ouvreur désigné, pendant la temporisation seulement (null le reste du temps).
+  openerId: string | null
 }
 
 export function seatRows(input: SeatInput): SeatRow[] {
-  const { players, ownedCards, deckSize, leaderId, passedIds, pendingWinnerId, justWon } = input
+  const { players, ownedCards, deckSize, leaderId, passedIds, pendingWinnerId, justWon, openerId } = input
   return players.map(p => {
     const owned = cardsOf(ownedCards, p.id).length
     const filled = Math.max(0, owned - (pendingWinnerId === p.id ? 1 : 0))
@@ -54,6 +61,8 @@ export function seatRows(input: SeatInput): SeatRow[] {
         : null,
       popIndex: gagne ? filled - 1 : null,
       paid: gagne ? justWon.amount : null,
+      jokerUsed: p.joker_used,
+      opens: p.id === openerId,
     }
   })
 }

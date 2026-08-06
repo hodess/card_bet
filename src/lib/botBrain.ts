@@ -115,11 +115,17 @@ export type BotView = {
   // rivaux EN COURSE = actifs et n'ayant pas passé sur l'enchère en cours
   rivals: { bankroll: number; slotsMissing: number; passed: boolean }[]
   soldPrices: { rating: number; price: number }[]
+  // Fenêtre du joker : le serveur ne l'accepte que de l'ouvreur désigné, et
+  // seulement avant que l'enchère devienne vivante.
+  jokerAvailable: boolean
+  isForcedBidder: boolean
+  auctionLive: boolean
 }
 
 export type BotDecision =
   | { kind: 'bid'; amount: number }
   | { kind: 'pass' }
+  | { kind: 'joker' }
   | { kind: 'wait' }
 
 type Faute = 'renoncement' | 'entetement' | null
@@ -172,9 +178,11 @@ function theoreticalFor(view: BotView, rating: number): number {
   // bots gardant 519 à 697 € sur 1000, et un humain raflant un 89 pour 230 €.
   //
   // Une variante modulait ce plancher par S / T pour le niveau difficile. Retirée :
-  // à 4 joueurs elle le ramenait à 0,07, le rendait muet, et il gagnait alors par
-  // l'auto-complétion — en laissant les autres remplir leur deck pour ramasser les
-  // dernières cartes à la mise minimale. Gagner en se taisant n'est pas jouer.
+  // à 4 joueurs elle le ramenait à 0,07, le rendait muet, et il gagnait alors par la
+  // fin de partie en solo — en laissant les autres remplir leur deck pour ramasser
+  // les dernières cartes à la mise minimale, faute de challenger. Le mécanisme est
+  // intact (l'« auto-complétion » qui le nommait, elle, n'existe plus : ces cartes
+  // sont désormais jouées une par une). Gagner en se taisant n'est pas jouer.
   const plancher = level.spendFloor
   const uPlancher = plancher + (1 - plancher) * u
   return ceiling({
@@ -296,9 +304,34 @@ function bidAmount(view: BotView, limite: number, cap: number, rng: () => number
   return Math.max(minimum, Math.min(Math.floor(cible), limite))
 }
 
+// Le veto de l'ouvreur. Deux motifs, selon le niveau :
+//
+// — défensif : la carte est dans le bas de ce qui reste à sortir. Le coût d'une
+//   ouverture forcée n'est pas la mise minimale, dérisoire, c'est le SLOT qu'elle
+//   remplit — un déchet pris maintenant, c'est une bonne carte manquée plus tard.
+// — déni (meilleur niveau seulement) : la carte est excellente et un rival peut
+//   surenchérir plus haut que notre propre plafond. On ne la gagnera pas ; autant
+//   qu'elle ne profite à personne.
+//
+// Le critère est le percentile seul, sans condition annexe : c'est le calibrage
+// qui règle la sévérité, et une règle énonçable en une phrase reste déboguable.
+function veutJoker(view: BotView): boolean {
+  if (!view.jokerAvailable || !view.isForcedBidder || view.auctionLive) return false
+  const level = config.bot.levels[view.level]
+  const q = percentile(view.pool, view.cardRating)
+  if (level.jokerFloor !== null && q < level.jokerFloor) return true
+  if (level.jokerDenyTop !== null && q > level.jokerDenyTop) {
+    return topRivalCap(view.rivals, view.minBid) > maxBid(view.bankroll, view.slotsMissing, view.minBid)
+  }
+  return false
+}
+
 // Surenchérir tant que le prix reste sous le plafond, passer dès qu'il le dépasse.
 export function decide(view: BotView, rng: () => number): BotDecision {
   if (view.slotsMissing <= 0) return { kind: 'wait' }
+  // Pendant la temporisation, l'ouvreur forcé EST le meneur : sans ce test placé
+  // ici, le bot sortirait en 'wait' sans jamais envisager son joker.
+  if (veutJoker(view)) return { kind: 'joker' }
   if (view.currentBidder === view.botPlayerId) return { kind: 'wait' }
   if (drawnFault(view) === 'renoncement') return { kind: 'pass' }
 

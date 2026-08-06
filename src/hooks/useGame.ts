@@ -10,12 +10,22 @@ type PlayerCardRow = Database['public']['Tables']['player_cards']['Row']
 
 export type AuctionWithCard = AuctionRow & { card: CardRow }
 export type OwnedCard = PlayerCardRow & { card: CardRow }
+// Enchère précédente réduite à ce qui décide de son animation de sortie : son
+// identité, et le verdict du serveur (`sold` ou `discarded`).
+export type AuctionOutcome = Pick<AuctionRow, 'id' | 'status'>
 
 export type GameState = {
   loading: boolean
   game: GameRow | null
   players: PlayerRow[]
   auction: AuctionWithCard | null
+  // Verdict serveur de l'enchère précédente. Sans lui, le client devinait la
+  // défausse à l'absence de ligne `player_cards` : la transaction serveur est bien
+  // atomique, mais pas la LECTURE — les requêtes ci-dessous partent chacune dans
+  // son propre instantané, donc un chargement déjà en vol au moment du commit peut
+  // lire `auctions` après et `player_cards` avant, et tamponner « Joker » sur une
+  // carte réellement vendue.
+  previousAuction: AuctionOutcome | null
   ownedCards: OwnedCard[]
   myPlayerId: string | null
   // exclu par l'hôte : j'étais assis, ma ligne a disparu (et la RLS m'a fermé la partie)
@@ -26,27 +36,31 @@ export type GameState = {
 export function useGame(gameId: string): GameState {
   const seated = useRef(false)
   const [state, setState] = useState<Omit<GameState, 'refresh'>>({
-    loading: true, game: null, players: [], auction: null, ownedCards: [],
-    myPlayerId: null, kicked: false,
+    loading: true, game: null, players: [], auction: null, previousAuction: null,
+    ownedCards: [], myPlayerId: null, kicked: false,
   })
 
   const loadAll = useCallback(async () => {
     const [gameRes, playersRes, auctionsRes, ownedRes, authRes] = await Promise.all([
       supabase.from('games').select('*').eq('id', gameId).maybeSingle(),
       supabase.from('players').select('*').eq('game_id', gameId).order('seat'),
+      // Les DEUX dernières : la courante, et celle qu'on vient de quitter — dont le
+      // `status` tranche entre adjudication et défausse.
       supabase.from('auctions').select('*, card:cards(*)').eq('game_id', gameId)
-        .order('seq', { ascending: false }).limit(1),
+        .order('seq', { ascending: false }).limit(2),
       supabase.from('player_cards').select('*, card:cards(*)').eq('game_id', gameId),
       supabase.auth.getUser(),
     ])
     const players = playersRes.data ?? []
     const me = players.find(p => p.auth_uid === authRes.data.user?.id) ?? null
     if (me) seated.current = true
+    const auctions = (auctionsRes.data as AuctionWithCard[] | null) ?? []
     setState({
       loading: false,
       game: gameRes.data ?? null,
       players,
-      auction: (auctionsRes.data?.[0] as AuctionWithCard | undefined) ?? null,
+      auction: auctions[0] ?? null,
+      previousAuction: auctions[1] ? { id: auctions[1].id, status: auctions[1].status } : null,
       ownedCards: (ownedRes.data as OwnedCard[] | null) ?? [],
       myPlayerId: me?.id ?? null,
       // exclu par l'hôte : sa ligne a disparu après être apparue — mais seulement si

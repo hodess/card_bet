@@ -155,7 +155,8 @@ select lives_ok(
   $$select create_game('GrosPrive', 6, null, null, null, null, 'private', 8)$$,
   'privée avec les mêmes réglages acceptée (rattrapable par start_game)');
 
--- fin de partie à 3 joueurs : auto-complétion à N > 2, passage à finished, et
+-- fin de partie à 3 joueurs : les cartes du dernier joueur incomplet s'adjugent
+-- une par une jusqu'à finished, et
 -- record_match sur un match à 3. Un profil est nécessaire pour que record_match
 -- écrive (cf. 12_history.sql) : on reprend son motif test_signup + claim_username
 -- pour le siège 0.
@@ -191,7 +192,7 @@ begin
 end $$;
 
 select is((select status from games where id = (select gid from trois)), 'finished',
-  'partie à 3 joueurs terminée par auto-complétion du dernier joueur incomplet');
+  'partie à 3 joueurs terminée en déroulant les cartes du dernier joueur incomplet');
 select is(
   (select count(*)::int from players p where p.game_id = (select gid from trois)
      and (select count(*) from player_cards pc where pc.player_id = p.id) = 2),
