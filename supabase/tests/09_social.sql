@@ -44,7 +44,7 @@ select throws_ok(format($$select join_game_by_id(%L, 'Intrus')$$, (select gid fr
 select throws_ok(format($$select update_game_settings(%L, p_start_bankroll => 2000)$$, (select gid from priv)),
   'P0001', 'NOT_HOST', 'étranger ne règle rien');
 select test_login('00000000-0000-0000-0000-000000000001');
-select lives_ok(format($$select update_game_settings(%L, p_start_bankroll => 2000, p_close_delay_seconds => 5)$$, (select gid from priv)),
+select lives_ok(format($$select update_game_settings(%L, p_start_bankroll => 2000, p_close_delay_seconds => 10)$$, (select gid from priv)),
   'l''hôte règle en lobby privé');
 select is((select start_bankroll from games where id = (select gid from priv)), 2000, 'bankroll réglée');
 select is((select min(bankroll)::int from players where game_id = (select gid from priv)), 2000, 'bankrolls joueurs resynchronisées');

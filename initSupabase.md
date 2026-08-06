@@ -145,7 +145,8 @@ npx supabase test db
 ```
 
 C'est là que se vérifient la règle de réserve, l'idempotence de `close_auction`, les
-mises concurrentes, l'auto-complétion et le calcul du classement.
+mises concurrentes, la fin de partie déroulée carte par carte, la défausse au joker
+et le calcul du classement.
 
 ### g. Le ménage automatique (pg_cron)
 

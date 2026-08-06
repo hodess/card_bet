@@ -14,6 +14,8 @@ export default function CardCount({ phase, remaining, urgent, color }: {
   const { t } = useT()
   const adjuge = isSettled(phase)
   const legende = phase === 'reveal' ? t('auction.newCard')
+    : phase === 'pause' ? t('auction.awaitingOpen')
+    : phase === 'discarded' ? t('auction.discardedLegend')
     : adjuge ? t('auction.stampSold')
     : urgent ? t('auction.closingIn')
     : t('auction.noRaise')

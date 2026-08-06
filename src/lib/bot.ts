@@ -20,6 +20,9 @@ export function startBot(gameCode: string, nickname: string, level: BotLevel): (
   // l'appel RPC et sa réplication laisserait passer plusieurs appels en double
   // (erreurs `ALREADY_PASSED`). Ce `Set` est la ceinture, ce filtre est les bretelles.
   const passRolled = new Set<string>()
+  // Même motif que `passRolled` : une seule tentative de joker par enchère, pour
+  // éviter d'appeler `use_joker` en rafale pendant le délai de réplication.
+  const jokerRolled = new Set<string>()
   // Le pack ne change jamais : une seule lecture pour toute la partie, indexée par
   // id de carte pour servir aussi bien la note de la carte en cours que celles des
   // cartes déjà passées en enchère.
@@ -79,9 +82,15 @@ export function startBot(gameCode: string, nickname: string, level: BotLevel): (
       // ferait croire à une exclusion et tuerait le bot à tort
       else if (seated && !playersRes.error) { stop(); return }
       if (game.status !== 'playing' || !auction || auction.status !== 'open' || !me) return
-      // sursis de révélation : le serveur refuse mises et passes avant l'ouverture
-      if (new Date(auction.opened_at).getTime() > Date.now()) return
       if (auction.passed.includes(me.id)) return
+      // Temporisation. Le serveur refuse mise et passe avant `opened_at`
+      // (`AUCTION_NOT_STARTED`) mais n'accepte le joker QUE dans cet intervalle
+      // (`JOKER_TOO_LATE` après). La garde ne peut donc pas couper le tick ici : elle
+      // se contente d'écarter ceux qui n'ont rien à y faire — tout le monde sauf
+      // l'ouvreur désigné qui a encore son joker. Les autres attendent l'ouverture ;
+      // c'est plus bas, après `decide`, que le tick renonce à agir.
+      const auctionLive = new Date(auction.opened_at).getTime() <= Date.now()
+      if (!auctionLive && (auction.forced_bidder !== me.id || me.joker_used)) return
 
       // Le pack entier, une seule fois pour toute la partie. C'est CE cache qui
       // garantit le coût réseau constant : la note de la carte en cours comme celles
@@ -131,9 +140,27 @@ export function startBot(gameCode: string, nickname: string, level: BotLevel): (
         soldPrices: owned
           .map(c => ({ rating: noteDe(c.card_id), price: c.price_paid }))
           .filter((s): s is { rating: number; price: number } => s.rating !== undefined),
+        jokerAvailable: !me.joker_used,
+        isForcedBidder: auction.forced_bidder === me.id,
+        // Le même instant que la garde plus haut : relire l'horloge ici rendrait
+        // `auctionLive` vrai par construction (on ne passe la garde qu'après
+        // `opened_at`, ou en étant l'ouvreur), et le joker redeviendrait mort.
+        auctionLive,
       }
 
       const decision = decide(view, Math.random)
+      // Le joker AVANT le test de vivacité : c'est la seule action que le serveur
+      // accepte pendant la temporisation, et il la refuse partout ailleurs.
+      if (decision.kind === 'joker') {
+        if (!jokerRolled.has(auction.id)) {
+          jokerRolled.add(auction.id)
+          await bot.rpc('use_joker', { g_id: gameId })  // erreurs ignorées (races normales)
+        }
+        return
+      }
+      // Enchère pas encore ouverte et pas de joker à jouer : ni mise ni passe ne
+      // partent, le serveur les refuserait. On attend le tick suivant.
+      if (!auctionLive) return
       if (decision.kind === 'wait') return
       if (decision.kind === 'pass') {
         if (!passRolled.has(auction.id)) {

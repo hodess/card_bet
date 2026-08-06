@@ -24,7 +24,7 @@
         "step": 5
       },
       "closeDelaySeconds": {
-        "min": 1,
+        "min": 6,
         "max": 60,
         "step": 1
       },
@@ -112,7 +112,9 @@
         "priceMemory": false,
         "delayMinMs": 1200,
         "delayMaxMs": 3000,
-        "spendFloor": 0.45
+        "spendFloor": 0.45,
+        "jokerFloor": null,
+        "jokerDenyTop": null
       },
       "medium": {
         "kappa": 3,
@@ -128,7 +130,9 @@
         "priceMemory": false,
         "delayMinMs": 600,
         "delayMaxMs": 1800,
-        "spendFloor": 0.3
+        "spendFloor": 0.3,
+        "jokerFloor": 0.1,
+        "jokerDenyTop": null
       },
       "hard": {
         "kappa": 3,
@@ -144,7 +148,9 @@
         "priceMemory": true,
         "delayMinMs": 300,
         "delayMaxMs": 900,
-        "spendFloor": 0.22
+        "spendFloor": 0.22,
+        "jokerFloor": null,
+        "jokerDenyTop": 0.75
       }
     }
   },
@@ -182,6 +188,7 @@
       "landedMs": 950,
       "floatMs": 900,
       "urgentMs": 1200,
+      "minJokerWindowMs": 3000,
       "maxPips": 8,
       "table": {
         "cardW": 246,

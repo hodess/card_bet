@@ -85,6 +85,9 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
   stroke: var(--danger);
   animation: urgent 0.5s steps(1, end) infinite;
 }
+/* V2.3 : l'anneau ne mesure pas toujours une enchère */
+.timer-ring.tone-accent .ring-fg { stroke: var(--accent); }
+.timer-ring.tone-muted .ring-fg { stroke: var(--muted); }
 
 /* ----- Boutons de mise ----- */
 .bid-zone { display: flex; flex-direction: column; gap: 8px; }
@@ -343,6 +346,11 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 }
 @keyframes urgent { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+/* Défausse : la carte ne rejoint aucun deck, elle sort par le haut. */
+@keyframes exitUp {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-140px) scale(0.86); }
+}
 
 /* ----- V1.3 : carte, variante full ----- */
 .fut-card:not(.mini) {
@@ -427,6 +435,15 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 .card-holder.fly { transition: transform 0.72s cubic-bezier(0.55, -0.15, 0.4, 1); }
 .card-holder.fly.fade { opacity: 0; transition: opacity 0.4s ease-out; }
 .card-holder.landed { opacity: 0; }
+/* Noir et blanc : la carte est hors jeu. Le tampon tombe d'abord (stampIn, 450 ms
+   dans .card-stamp), puis la carte sort — les deux durées sont celles de
+   l'adjudication (soldMs puis flyMs), donc DISCARD_MS les couvre exactement. */
+.card-holder.discarded {
+  filter: grayscale(1) brightness(0.85);
+  animation: exitUp 0.72s 0.95s cubic-bezier(0.55, -0.15, 0.4, 1) both;
+}
+.card-stamp.joker { border-color: var(--accent); }
+.card-stamp.joker strong { color: var(--accent); }
 .card-flash {
   position: absolute; inset: -40px; pointer-events: none;
   background: radial-gradient(circle at 50% 50%, #fff, transparent 62%);
@@ -467,6 +484,11 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
   /* On garde l'information (la carte change, elle est adjugée) sans le mouvement */
   .card-holder.reveal { animation: fadeIn 0.2s ease-out both; }
   .card-holder.fly { transform: none !important; opacity: 0; transition: opacity 0.3s ease-out; }
+  /* Le tampon Joker doit rester lisible : on ne coupe que le mouvement (l'animation
+     exitUp, qui mêle sortie et disparition), pas l'opacité — sinon tout le sous-arbre
+     de .card-holder, tampon compris, deviendrait transparent pour toute la séquence.
+     Le noir et blanc (filter, pas un mouvement) reste appliqué par la règle de base. */
+  .card-holder.discarded { animation: none; }
   .card-stamp { animation: fadeIn 0.2s ease-out both; }
   .timer-ring.urgent .ring-fg { animation: none; }
   .lb-raise, .seat-paid, .seat-slot.pop, .lb-bid strong, .seat-bank, .bid-help strong {
@@ -695,3 +717,31 @@ button.secondary { background: var(--bg2); color: var(--text); border: 1px solid
 .fut-card.sheet .fut-rating { font-size: 1.9rem; top: 0.5rem; left: 0.7rem; }
 .fut-card.sheet .fut-position { font-size: 0.75rem; top: 2.5rem; left: 0.75rem; }
 .fut-card.sheet .fut-name { font-size: 0.95rem; }
+
+/* ----- V2.3 : décision d'ouverture (temporisation) ----- */
+.opening { display: flex; flex-direction: column; gap: 10px; }
+.opening-line { margin: 0; font-size: 15px; font-weight: 800; color: var(--text); }
+button.joker {
+  width: 100%; border: 1px solid var(--accent); border-radius: 999px;
+  background: transparent; color: var(--accent); font-size: 15px; font-weight: 800;
+}
+.opening-chrono { display: flex; align-items: center; gap: 8px; }
+.oc-track {
+  flex: 1; height: 4px; border-radius: 2px; background: #2c3654; overflow: hidden;
+}
+.oc-track i { display: block; height: 100%; background: var(--accent); }
+.oc-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted);
+}
+.oc-label strong { color: var(--accent); font-variant-numeric: tabular-nums; }
+.opening-hint { margin: 0; font-size: 11px; line-height: 1.45; color: var(--muted); }
+
+/* ----- V2.3 : joker et ouverture sur les sièges ----- */
+.seat-row { display: flex; align-items: center; gap: 5px; }
+.seat-opens {
+  font-size: 8px; font-weight: 800; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--accent);
+}
+.seat-joker { font-size: 11px; line-height: 1; color: var(--accent); }
+.seat-joker.used { color: #39435f; }

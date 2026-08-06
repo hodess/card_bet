@@ -27,12 +27,16 @@ export type SimResult = {
   moneyLeft: number[]
   winners: number[]
   deckSizes: number[]
+  // Nombre de défausses de la partie. Sans ce compteur, le banc ne saurait pas dire
+  // si le joker a joué, et l'étalonnage mentirait en silence.
+  discarded: number
 }
 
 type Etat = {
   bankroll: number
   cards: number[]
   passed: boolean
+  jokerUsed: boolean
 }
 
 function melanger<T>(items: T[], rng: () => number): T[] {
@@ -53,7 +57,9 @@ export function simulateGame(input: {
   rng: () => number
 }): SimResult {
   const { players, deckSize, minBid, rng } = input
-  const etats: Etat[] = players.map(() => ({ bankroll: input.bankroll, cards: [], passed: false }))
+  const etats: Etat[] = players.map(() => ({
+    bankroll: input.bankroll, cards: [], passed: false, jokerUsed: false,
+  }))
   const temperaments = players.map(p => temperamentOf(p.nickname))
   const tirage = melanger(input.ratings, rng)
   // Jeton propre à cette partie, mêlé à l'identifiant d'enchère : sans lui, le bruit
@@ -63,6 +69,7 @@ export function simulateGame(input: {
   const jeton = Math.floor(rng() * 1e9).toString(36)
   const vues: number[] = []            // notes déjà passées en enchère
   const vendues: { rating: number; price: number }[] = []
+  let defaussees = 0                   // cartes sorties au joker, achetées par personne
   let ouvreur = 0
   let seq = 0
 
@@ -73,8 +80,67 @@ export function simulateGame(input: {
     vues.push(rating)
     const enJeu = actifs()
 
-    // Auto-complétion : dernier joueur actif, ses slots se remplissent à la mise
-    // minimale (RULES.md §5).
+    // Ouverture forcée : rotation parmi les joueurs actifs. Résolue avant tout le
+    // reste, y compris avant le cas du joueur seul : c'est l'ouvreur qui décide
+    // d'un éventuel veto, et il garde son joker jusqu'au bout de la partie.
+    while (!enJeu.includes(ouvreur)) ouvreur = (ouvreur + 1) % players.length
+
+    // `poolAfter` est partagé avec le runtime : il gère les notes en doublon, ce
+    // qu'un simple filter ne ferait pas.
+    const pool = poolAfter(input.ratings, vues)
+    // Les passes sont remises à zéro AVANT la vue de l'ouvreur : elles n'ont de sens
+    // qu'à l'intérieur d'une enchère, et sans ce placement la vue de l'ouvreur
+    // hériterait des passes de la carte précédente.
+    etats.forEach(e => { e.passed = false })
+
+    // La vue d'un joueur sur la carte en cours. Ce qui est commun aux deux moments de
+    // l'enchère (la temporisation et les tours discrets) vit ici ; ce qui les
+    // distingue — qui regarde, qui mène, à quel prix, enchère vivante ou non — reste
+    // aux deux appels ci-dessous.
+    const vueDe = (
+      i: number,
+      contexte: { meneur: number; prix: number; auctionLive: boolean },
+    ): BotView => ({
+      botPlayerId: String(i),
+      level: players[i].level,
+      temperament: temperaments[i],
+      auctionId: `sim-${jeton}-${seq}`,
+      currentBidder: String(contexte.meneur),
+      currentBid: contexte.prix,
+      bankroll: etats[i].bankroll,
+      slotsMissing: deckSize - etats[i].cards.length,
+      totalSlotsMissing: enJeu.reduce((acc, j) => acc + (deckSize - etats[j].cards.length), 0),
+      minBid,
+      cardRating: rating,
+      pool,
+      packRatings: input.ratings,
+      rivals: enJeu
+        .filter(j => j !== i)
+        .map(j => ({
+          bankroll: etats[j].bankroll,
+          slotsMissing: deckSize - etats[j].cards.length,
+          passed: etats[j].passed,
+        })),
+      soldPrices: vendues,
+      jokerAvailable: !etats[i].jokerUsed,
+      isForcedBidder: i === ouvreur,
+      auctionLive: contexte.auctionLive,
+    })
+
+    // Tour de temporisation : l'ouvreur peut défausser la carte. Personne n'a encore
+    // pu surenchérir, donc il mène à la mise minimale et l'enchère n'est pas vivante.
+    const vueOuvreur = vueDe(ouvreur, { meneur: ouvreur, prix: minBid, auctionLive: false })
+    if (decide(vueOuvreur, rng).kind === 'joker') {
+      etats[ouvreur].jokerUsed = true
+      defaussees++
+      ouvreur = (ouvreur + 1) % players.length   // la rotation avance après un veto
+      seq++
+      continue
+    }
+
+    // Fin en solo : dernier joueur actif, ses slots se remplissent à la mise
+    // minimale (RULES.md §5). Le serveur les joue une par une ; la comptabilité
+    // est la même, et c'est elle qui intéresse le banc d'essai.
     if (enJeu.length === 1) {
       const i = enJeu[0]
       etats[i].cards.push(rating)
@@ -84,17 +150,11 @@ export function simulateGame(input: {
       continue
     }
 
-    // Ouverture forcée : rotation parmi les joueurs actifs.
-    while (!enJeu.includes(ouvreur)) ouvreur = (ouvreur + 1) % players.length
     let meneur = ouvreur
     let prix = minBid
-    etats.forEach(e => { e.passed = false })
 
     // Tours discrets : chacun décide à son tour, jusqu'à ce que plus personne ne
     // surenchérisse. Le garde-fou sur les tours remplace le plafond de 60 s.
-    // `poolAfter` est partagé avec le runtime : il gère les notes en doublon, ce
-    // qu'un simple filter ne ferait pas.
-    const pool = poolAfter(input.ratings, vues)
     let tours = 0
     let encore = true
     while (encore && tours < config.bot.simMaxRounds) {
@@ -103,30 +163,7 @@ export function simulateGame(input: {
       for (const i of enJeu) {
         if (i === meneur || etats[i].passed) continue
         const S = deckSize - etats[i].cards.length
-        const vue: BotView = {
-          botPlayerId: String(i),
-          level: players[i].level,
-          temperament: temperaments[i],
-          auctionId: `sim-${jeton}-${seq}`,
-          currentBidder: String(meneur),
-          currentBid: prix,
-          bankroll: etats[i].bankroll,
-          slotsMissing: S,
-          totalSlotsMissing: enJeu.reduce((acc, j) => acc + (deckSize - etats[j].cards.length), 0),
-          minBid,
-          cardRating: rating,
-          pool,
-          packRatings: input.ratings,
-          rivals: enJeu
-            .filter(j => j !== i)
-            .map(j => ({
-              bankroll: etats[j].bankroll,
-              slotsMissing: deckSize - etats[j].cards.length,
-              passed: etats[j].passed,
-            })),
-          soldPrices: vendues,
-        }
-        const d = decide(vue, rng)
+        const d = decide(vueDe(i, { meneur, prix, auctionLive: true }), rng)
         if (d.kind === 'pass') { etats[i].passed = true; continue }
         if (d.kind === 'bid' && d.amount > prix
             && d.amount <= maxBid(etats[i].bankroll, S, minBid)) {
@@ -152,7 +189,7 @@ export function simulateGame(input: {
   const meilleurArgent = Math.max(...candidats.map(i => moneyLeft[i]))
   const winners = candidats.filter(i => moneyLeft[i] === meilleurArgent)
   const deckSizes = etats.map(e => e.cards.length)
-  return { scores, moneyLeft, winners, deckSizes }
+  return { scores, moneyLeft, winners, deckSizes, discarded: defaussees }
 }
 
 // Taux de victoire par siège sur `games` parties. Une victoire partagée compte

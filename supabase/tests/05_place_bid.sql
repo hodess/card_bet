@@ -1,11 +1,20 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(11);
+select plan(12);
 
 create function test_login(uid uuid) returns void language plpgsql as $$
 begin
   perform set_config('request.jwt.claims',
     json_build_object('sub', uid, 'role', 'authenticated')::text, true);
+end $$;
+
+-- consomme la temporisation de l'enchère ouverte : ce fichier teste les règles de
+-- mise, pas l'attente
+create function test_live(g uuid) returns void language plpgsql as $$
+begin
+  update auctions set opened_at = now() - interval '1 second',
+                      last_bid_at = now() - interval '1 second'
+  where game_id = g and status = 'open';
 end $$;
 
 select test_login('00000000-0000-0000-0000-000000000001');
@@ -17,6 +26,7 @@ select start_game((select gid from t));
 create temp table ids as select
   (select id from players where seat = 0) as p1,
   (select id from players where seat = 1) as p2;
+select test_live((select gid from t));
 
 select test_login('00000000-0000-0000-0000-000000000003');
 select throws_ok(format($$select place_bid(%L, 60)$$, (select gid from t)),
@@ -44,12 +54,25 @@ select test_login('00000000-0000-0000-0000-000000000002');
 select throws_ok(format($$select place_bid(%L, 990)$$, (select gid from t)),
   'P0001', 'DECK_FULL', 'deck plein ne mise plus');
 
--- p1 mise 980 : p2 (deck plein) n'est plus challenger → clôture immédiate,
--- puis p1 est seul incomplet → auto-complétion → partie terminée dans la foulée
+-- p1 mise 980 : p2 (deck plein) n'est plus challenger → clôture immédiate. p1
+-- reste seul incomplet, et la partie ne saute plus au classement : elle déroule
+-- ses cartes restantes une par une, chacune adjugée à la mise minimale.
 select test_login('00000000-0000-0000-0000-000000000001');
 select lives_ok(format($$select place_bid(%L, 980)$$, (select gid from t)), 'p1 mise 980');
+select is((select status from games where id = (select gid from t)), 'playing',
+  'un seul joueur incomplet : la partie continue carte par carte');
+do $$
+declare i int := 0;
+begin
+  while (select status from games where id = (select gid from t)) <> 'finished'
+        and i < 50 loop
+    perform test_live((select gid from t));
+    perform close_auction((select gid from t));
+    i := i + 1;
+  end loop;
+end $$;
 select is((select status from games where id = (select gid from t)), 'finished',
-  'clôture immédiate + auto-complétion → partie finie');
+  'les cartes restantes déroulent jusqu''à la fin');
 select throws_ok(format($$select place_bid(%L, 990)$$, (select gid from t)),
   'P0001', 'GAME_NOT_PLAYING', 'plus de mise après la fin');
 

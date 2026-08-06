@@ -17,8 +17,8 @@ describe('playerColor', () => {
 })
 
 const joueurs = [
-  { id: 'a', nickname: 'Alice', bankroll: 800, seat: 0 },
-  { id: 'b', nickname: 'Bob', bankroll: 950, seat: 1 },
+  { id: 'a', nickname: 'Alice', bankroll: 800, seat: 0, joker_used: false },
+  { id: 'b', nickname: 'Bob', bankroll: 950, seat: 1, joker_used: false },
 ]
 const base = {
   players: joueurs,
@@ -28,6 +28,7 @@ const base = {
   passedIds: [] as string[],
   pendingWinnerId: null,
   justWon: null,
+  openerId: null,
 }
 
 describe('seatRows', () => {
@@ -75,5 +76,25 @@ describe('seatRows', () => {
   it('ne descend jamais sous zéro slot rempli', () => {
     const [, bob] = seatRows({ ...base, pendingWinnerId: 'b' })
     expect(bob.filled).toBe(0)
+  })
+})
+
+describe('seatRows — joker et ouverture', () => {
+  it('marque le joker consommé et le siège qui ouvre', () => {
+    const rows = seatRows({
+      players: [
+        { id: 'a', nickname: 'A', bankroll: 100, seat: 0, joker_used: false },
+        { id: 'b', nickname: 'B', bankroll: 100, seat: 1, joker_used: true },
+      ],
+      ownedCards: [],
+      deckSize: 3,
+      leaderId: null,
+      passedIds: [],
+      pendingWinnerId: null,
+      justWon: null,
+      openerId: 'a',
+    })
+    expect(rows[0]).toMatchObject({ jokerUsed: false, opens: true })
+    expect(rows[1]).toMatchObject({ jokerUsed: true, opens: false })
   })
 })

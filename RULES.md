@@ -24,7 +24,7 @@ démarre avec la même bankroll virtuelle.
 | Taille du deck | 3 | Nombre de cartes à obtenir pour finir |
 | Mise minimale | 10 | Sert aussi de montant d'ouverture forcée |
 | Incréments de mise | +10 / +50 / +100 / Max | Boutons de surenchère rapide |
-| Délai d'adjudication | 3 s (configurable par partie) | Sans surenchère pendant ce délai, la carte est adjugée |
+| Délai d'adjudication | 8 s (configurable par partie, 6 s minimum) | Sans surenchère pendant ce délai, la carte est adjugée. Sert aussi de temporisation entre deux cartes. |
 | Passer | À tout moment sauf en tête | Se retirer définitivement de l'enchère en cours |
 | Durée max d'une enchère | 60 s | Plafond dur, l'enchère ne peut pas bloquer la partie |
 
@@ -39,7 +39,7 @@ L'objectif de design est que ça reste rapide (ordre de grandeur : 2 à 3 minute
    dont le deck n'est pas complet.
 3. Les autres joueurs peuvent surenchérir via les boutons d'incréments. Chaque mise doit
    être strictement supérieure à la précédente.
-4. Chaque nouvelle mise **relance le compte à rebours** (délai d'adjudication, 3 s par
+4. Chaque nouvelle mise **relance le compte à rebours** (délai d'adjudication, 8 s par
    défaut).
 5. À tout moment, un joueur qui ne mène pas peut **passer** : il se retire
    définitivement de cette enchère.
@@ -50,10 +50,11 @@ L'objectif de design est que ça reste rapide (ordre de grandeur : 2 à 3 minute
    - **plus aucun joueur ne peut ou ne veut surenchérir** (tous ont passé, ou leur
      réserve ne permet plus de suivre) : adjudication **immédiate**, sans attendre.
 7. L'adjudication est **jouée à l'écran** (tampon « Adjugé », la carte rejoint le deck
-   du gagnant), puis la carte suivante apparaît. Pendant ces 3 secondes, la nouvelle
-   enchère est **en pause** : on ne peut ni miser ni passer, et son compte à rebours ne
-   démarre qu'une fois la carte posée — on n'enchérit pas sur une carte qu'on ne voit
-   pas.
+   du gagnant), puis la carte suivante apparaît. Chaque carte est précédée d'une
+   **temporisation** égale au délai d'adjudication de la partie — première carte
+   comprise. Pendant cette pause, la carte est visible mais l'enchère n'a pas
+   commencé : on ne peut ni miser ni passer, son compte à rebours ne démarre pas, et
+   c'est la seule fenêtre où le joueur désigné peut jouer son **joker** (section 7).
 
 ## 4. Règle de réserve
 
@@ -75,9 +76,11 @@ Conséquences :
 
 - Un joueur dont le deck est complet **ne participe plus** aux enchères (il est sauté
   dans la rotation et ne peut plus miser). Il devient spectateur jusqu'à la fin.
-- **Auto-complétion** : quand il ne reste qu'un seul joueur avec un deck incomplet, ses
-  slots restants sont remplis automatiquement avec les cartes suivantes à la mise
-  minimale, et le classement s'affiche immédiatement.
+- **Fin en solo** : quand il ne reste qu'un seul joueur avec un deck incomplet, plus
+  personne ne peut le contrer. Ses cartes restantes s'enchaînent donc à la mise
+  minimale, mais **jouées à l'écran** comme les autres — une par une, avec leur
+  temporisation et leur adjudication — au lieu de sauter directement au classement.
+  Il garde la main sur son joker jusqu'au bout.
 - La partie elle-même est **temporaire** : tout est supprimé après la fin, sauf
   pour les joueurs connectés à un compte, dont l'historique (résumé, deck
   final avec le nom et la note de chaque carte achetée) est conservé
@@ -98,13 +101,19 @@ Le prix d'achat des cartes n'a **aucune incidence sur le score** : seule la note
 cartes compte. Le prix payé n'agit qu'indirectement, via la bankroll consommée pendant
 la partie et l'argent restant au départage.
 
-## 7. Le joker *(à partir de la V1)*
+## 7. Le joker
 
 - Chaque joueur dispose de **un joker par partie**.
-- Il permet de **refuser une ouverture forcée** : l'obligation passe alors au joueur
-  suivant dans la rotation.
-- Si tous les joueurs éligibles refusent (ou ne peuvent pas miser), la carte est
-  **défaussée** et la carte suivante apparaît.
+- Seul le joueur désigné pour l'**ouverture forcée** peut le jouer, et seulement
+  **pendant la temporisation** qui précède l'enchère. Passé ce délai, l'ouverture part
+  et la carte est en jeu.
+- Le joker **défausse la carte** : elle quitte la partie, personne ne l'achète, aucun
+  argent ne bouge. Le tirage étant sans remise, elle ne réapparaît jamais.
+- L'**obligation d'ouvrir avance normalement** : le voisin suivant ouvre la carte
+  suivante.
+- C'est ce qui donne un vrai intérêt au siège d'ouvreur : on peut écarter une carte
+  dont on ne veut pas, ou priver un rival d'une carte qu'il convoite.
+- Chaque siège montre publiquement s'il a encore son joker.
 
 ## 8. Les packs de cartes
 

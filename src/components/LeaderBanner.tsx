@@ -8,7 +8,7 @@ export default function LeaderBanner({ color, overline, name, bid, bidKey, raise
   color: string
   overline: string
   name: string
-  bid: number
+  bid: number | null
   bidKey: string
   raise: number | null
   neutral: boolean
@@ -27,7 +27,7 @@ export default function LeaderBanner({ color, overline, name, bid, bidKey, raise
       </span>
       <span className="lb-bid">
         <span className="lb-overline">{t('auction.bidLabel')}</span>
-        <strong key={bidKey}>{bid} €</strong>
+        <strong key={bidKey}>{bid === null ? '—' : `${bid} €`}</strong>
       </span>
       {raise !== null && <span className="lb-raise" key={bidKey}>+{raise} €</span>}
     </div>

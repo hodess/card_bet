@@ -486,6 +486,7 @@ export type Database = {
           game_id: string
           id: string
           is_bot: boolean
+          joker_used: boolean
           nickname: string
           seat: number
         }
@@ -496,6 +497,7 @@ export type Database = {
           game_id: string
           id?: string
           is_bot?: boolean
+          joker_used?: boolean
           nickname: string
           seat: number
         }
@@ -506,6 +508,7 @@ export type Database = {
           game_id?: string
           id?: string
           is_bot?: boolean
+          joker_used?: boolean
           nickname?: string
           seat?: number
         }
@@ -596,10 +599,7 @@ export type Database = {
       list_packs: { Args: never; Returns: Json }
       list_public_games: { Args: never; Returns: Json }
       may_host_pack: { Args: { p_slug: string; uid: string }; Returns: boolean }
-      open_next_auction: {
-        Args: { g_id: string; p_grace?: boolean }
-        Returns: undefined
-      }
+      open_next_auction: { Args: { g_id: string }; Returns: undefined }
       pass_auction: { Args: { g_id: string }; Returns: undefined }
       place_bid: { Args: { amount: number; g_id: string }; Returns: undefined }
       profile_id_of: { Args: { p_username: string }; Returns: string }
@@ -634,6 +634,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      use_joker: { Args: { g_id: string }; Returns: undefined }
       validate_pack_payload: { Args: { p: Json }; Returns: undefined }
     }
     Enums: {

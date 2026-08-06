@@ -16,6 +16,9 @@ export default function PlayerSeat({ row, unit, isMe, onDeckRef }: {
   onDeckRef: (playerId: string, el: HTMLDivElement | null) => void
 }) {
   const { t } = useT()
+  // `row.opens` n'a pas besoin d'être testé ici : pendant la temporisation l'ouvreur
+  // désigné EST le meneur (`open_next_auction` l'inscrit en `current_bidder`, et le
+  // serveur refuse toute mise avant `opened_at`), donc son siège est déjà `leading`.
   const mene = row.status === 'leading' || row.status === 'wins'
   const classes = ['seat', `seat-${unit.edge}`]
   if (mene) classes.push('leading')
@@ -33,8 +36,10 @@ export default function PlayerSeat({ row, unit, isMe, onDeckRef }: {
   const libelle = [
     row.nickname,
     isMe ? t('auction.you') : null,
+    row.opens ? t('auction.opens') : null,
     row.status ? statuts[row.status] : null,
     `${row.bankroll} €`,
+    row.jokerUsed ? t('auction.chipJokerUsed') : t('auction.chipJokerAvailable'),
   ].filter(Boolean).join(', ')
 
   return (
@@ -48,17 +53,21 @@ export default function PlayerSeat({ row, unit, isMe, onDeckRef }: {
         '--sy': unit.y,
       } as CSSProperties}
     >
+      {row.opens && <span className="seat-opens">{t('auction.opens')}</span>}
       <span className="seat-avatar">{avatarInitial(row.nickname)}</span>
       <span className="seat-name">{row.nickname}</span>
       {/* key = valeur : rejoue `slam` quand la bankroll change */}
       <span className="seat-bank" key={row.bankroll}>{row.bankroll} €</span>
-      <div className="seat-deck" ref={el => { onDeckRef(row.id, el) }}>
-        {Array.from({ length: row.total }, (_, i) => (
-          <i
-            key={i}
-            className={`seat-slot${i < row.filled ? ' filled' : ''}${i === row.popIndex ? ' pop' : ''}`}
-          />
-        ))}
+      <div className="seat-row">
+        <div className="seat-deck" ref={el => { onDeckRef(row.id, el) }}>
+          {Array.from({ length: row.total }, (_, i) => (
+            <i
+              key={i}
+              className={`seat-slot${i < row.filled ? ' filled' : ''}${i === row.popIndex ? ' pop' : ''}`}
+            />
+          ))}
+        </div>
+        <span className={`seat-joker${row.jokerUsed ? ' used' : ''}`}>★</span>
       </div>
       {row.paid !== null && <span className="seat-paid">−{row.paid} €</span>}
     </div>

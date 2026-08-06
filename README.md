@@ -47,9 +47,10 @@ navigateur. Mise en place de Supabase : [`initSupabase.md`](initSupabase.md).
   amis. Les parties restent temporaires ; seuls comptes/historique/amis sont
   persistés. Design : [`docs/superpowers/specs/2026-07-29-v1-comptes-design.md`](docs/superpowers/specs/2026-07-29-v1-comptes-design.md)
 - **V2 (en cours)** — 2 à 8 joueurs, plusieurs packs (Football, Naruto…) choisis
-  dans le salon d'une partie privée, création de packs par les joueurs (privés ou
-  publiés) sur `/packs`. Reste à faire : joker (refuser une ouverture forcée),
-  invitations d'amis en partie, ranking ELO.
+  dans le salon, création de packs par les joueurs (privés ou publiés) sur `/packs`,
+  parties publiques avec board, joker (veto qui défausse une carte) et temporisation
+  entre les cartes. Il reste le **visuel** (thème FUT poussé jusqu'au bout hors écran
+  d'enchère), les **invitations d'amis en partie**, et le **ranking ELO**.
 
 ## Développement local
 
